@@ -296,6 +296,7 @@
     "placeholders": { "0": { "content": "$1" } }
   },
   "ed_for_mailbox":         { "message": "For mailbox" },
+  "ed_folder_orphan":       { "message": "not found in this account" },
 
   "options_section_accounts":   { "message": "Accounts" },
   "options_section_about":      { "message": "About" },

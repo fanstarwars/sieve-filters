@@ -296,6 +296,7 @@
     "placeholders": { "0": { "content": "$1" } }
   },
   "ed_for_mailbox":         { "message": "Для ящика" },
+  "ed_folder_orphan":       { "message": "не найдена в этом ящике" },
 
   "options_section_accounts":   { "message": "Аккаунты" },
   "options_section_about":      { "message": "О плагине" },
