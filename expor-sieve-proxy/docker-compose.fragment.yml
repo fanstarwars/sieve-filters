@@ -1,0 +1,38 @@
+# docker-compose.fragment.yml — reference fragment.
+#
+# This file is documentation. The real source-of-truth is the heredoc inside
+# `install.sh`, which patches mailcow's `docker-compose.override.yml` between
+# `# >>> EXPOR-SIEVE-PROXY ... >>>` markers. Keep this file in sync if you
+# install manually.
+#
+# Manual install (NOT recommended — use install.sh):
+#   1. Build:  docker build -t expor-sieve-proxy:latest .
+#   2. Append the `expor-sieve-proxy:` block below to mailcow's
+#      docker-compose.override.yml (preserve any other services already there).
+#   3. Create /docker/mailcow-dockerized/.expor-sieve-proxy.env (root:600) with:
+#        MAILCOW_API_KEY=<rw-key>
+#        REDIS_URL=redis://:<REDISPASS>@redis:6379/0
+#   4. Copy conf/nginx-site.sieve-proxy.custom into data/conf/nginx/.
+#   5. docker compose up -d expor-sieve-proxy && docker exec ...nginx... nginx -s reload
+services:
+  expor-sieve-proxy:
+    image: expor-sieve-proxy:latest
+    restart: always
+    networks:
+      mailcow-network:
+        aliases:
+          - sieve-proxy
+    env_file:
+      - ./.expor-sieve-proxy.env
+    environment:
+      MAILCOW_API_URL: "http://nginx"
+      DOVECOT_HOST: "dovecot"
+      DOVECOT_PORT: "993"
+      DOVECOT_USE_SSL: "true"
+      LOG_LEVEL: "INFO"
+      ALLOWED_ORIGINS: "moz-extension://*"
+      F2B_ENABLED: "true"
+    depends_on:
+      - dovecot-mailcow
+      - nginx-mailcow
+      - redis-mailcow

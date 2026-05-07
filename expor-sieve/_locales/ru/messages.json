@@ -1,0 +1,493 @@
+{
+  "extension_name": {
+    "message": "Серверные Sieve-фильтры"
+  },
+  "extension_description": {
+    "message": "Управление серверными Sieve-фильтрами почты mailcow прямо из Thunderbird/Betterbird."
+  },
+  "browser_action_title": {
+    "message": "Серверные фильтры"
+  },
+
+  "btn_save":  { "message": "Сохранить" },
+  "btn_cancel": { "message": "Отмена" },
+  "btn_delete": { "message": "Удалить" },
+  "btn_edit":   { "message": "Редактировать" },
+  "btn_duplicate": { "message": "Дублировать" },
+  "btn_test_connection": { "message": "Проверить соединение" },
+  "btn_report_to_admin": { "message": "Сообщить администратору" },
+  "btn_close":  { "message": "Закрыть" },
+  "btn_ok":     { "message": "OK" },
+
+  "rule_name": { "message": "Имя фильтра" },
+  "rule_active": { "message": "Активно" },
+  "rule_match_label": { "message": "Письмо подходит, если:" },
+  "rule_match_all": { "message": "Выполнении всех условий" },
+  "rule_match_any": { "message": "Выполнении любого из условий" },
+  "rule_section_conditions": { "message": "Условия" },
+  "rule_section_actions": { "message": "Производить следующие действия:" },
+  "rule_add_condition": { "message": "Добавить условие" },
+  "rule_add_action": { "message": "Добавить действие" },
+  "rule_stop_after": { "message": "Прекратить обработку остальных правил" },
+  "rule_stop_after_help": { "message": "После срабатывания этого правила остальные правила не применяются к этому письму. Без галочки сработают все правила, чьи условия совпали — например, письмо может одновременно попасть в папку и получить флажок." },
+  "rule_remove_condition": { "message": "Удалить условие" },
+  "rule_remove_action": { "message": "Удалить действие" },
+  "rule_header_name_placeholder": { "message": "Имя заголовка" },
+  "rule_value_placeholder": { "message": "Значение" },
+  "rule_email_placeholder": { "message": "user@example.com" },
+  "rule_size_placeholder": { "message": "Размер" },
+
+  "field_from": { "message": "От" },
+  "field_to":   { "message": "Кому" },
+  "field_cc":   { "message": "Копия" },
+  "field_subject": { "message": "Тема" },
+  "field_header": { "message": "Заголовок" },
+  "field_size": { "message": "Размер" },
+  "field_attachment": { "message": "Содержит вложение" },
+
+  "op_contains":     { "message": "содержит" },
+  "op_not_contains": { "message": "не содержит" },
+  "op_is":           { "message": "равно" },
+  "op_starts":       { "message": "начинается с" },
+  "op_ends":         { "message": "заканчивается на" },
+  "op_contains_any": { "message": "содержит одно из (через запятую)" },
+  "op_gt":           { "message": "больше" },
+  "op_lt":           { "message": "меньше" },
+  "op_has_attachment": { "message": "есть" },
+  "op_no_attachment":  { "message": "нет" },
+
+  "act_fileinto":  { "message": "Переместить в папку" },
+  "act_copy":      { "message": "Скопировать в папку" },
+  "act_mark_read": { "message": "Пометить как прочитанное" },
+  "act_flag":      { "message": "Пометить флагом" },
+  "act_redirect":  { "message": "Перенаправить на адрес" },
+  "act_discard":   { "message": "Удалить" },
+  "act_trash":     { "message": "Переместить в Корзину" },
+
+  "warn_redirect": { "message": "Перенаправление видно отправителю." },
+  "warn_discard":  { "message": "Письмо будет удалено без сохранения, восстановить нельзя." },
+
+  "err_no_network": { "message": "Нет соединения с сервером почты. Проверьте интернет." },
+  "err_auth":       { "message": "Доступ к серверу запрещён. Обратитесь к администратору." },
+  "err_auth_password_wrong": { "message": "Пароль не подходит. Откройте настройки и обновите." },
+  "err_server":     { "message": "Сервер почты ответил ошибкой. Попробуйте позже." },
+  "err_validation": {
+    "message": "В правиле \"$NAME$\" ошибка: $MSG$",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "msg": { "content": "$2" }
+    }
+  },
+  "err_no_managed_config": { "message": "Конфигурация не задана. Откройте настройки и введите параметры подключения." },
+
+  "status_connected":    { "message": "Соединение установлено" },
+  "status_disconnected": { "message": "Нет соединения" },
+
+  "size_kb": { "message": "КБ" },
+  "size_mb": { "message": "МБ" },
+
+  "desc_arrow":      { "message": "→" },
+  "desc_in_folder":  { "message": "в папку $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "desc_copy_folder": { "message": "копия в $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "desc_mark_read": { "message": "пометить прочитанным" },
+  "desc_flag": { "message": "пометить флагом" },
+  "desc_redirect": { "message": "перенаправить на $ADDR$",
+    "placeholders": { "addr": { "content": "$1" } }
+  },
+  "desc_discard": { "message": "удалить" },
+  "desc_trash": { "message": "в Корзину" },
+  "desc_separator_and": { "message": " и " },
+  "desc_separator_or":  { "message": " или " },
+  "desc_more": { "message": "…ещё $N$",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "desc_field_value": { "message": "$FIELD$ $OP$ $VALUE$",
+    "placeholders": {
+      "field": { "content": "$1" },
+      "op": { "content": "$2" },
+      "value": { "content": "$3" }
+    }
+  },
+  "desc_attachment_yes": { "message": "есть вложение" },
+  "desc_attachment_no":  { "message": "нет вложения" },
+
+  "report_subject": { "message": "Ошибка плагина Sieve-фильтров" },
+  "report_body": {
+    "message": "Версия: $VER$\nЯщик: $MAILBOX$\nОшибка: $ERR$\n\nКомментарий:\n",
+    "placeholders": {
+      "ver": { "content": "$1" },
+      "mailbox": { "content": "$2" },
+      "err": { "content": "$3" }
+    }
+  },
+
+  "options_title":             { "message": "Серверные фильтры — настройки" },
+  "options_nav_connection":    { "message": "Подключение" },
+  "options_nav_about":         { "message": "О плагине" },
+  "options_field_baseurl":     { "message": "Адрес сервера middleware" },
+  "options_field_baseurl_placeholder": { "message": "https://mail.example.com/sieve-proxy" },
+  "options_field_password":    { "message": "Пароль почтового ящика" },
+  "options_field_password_placeholder": { "message": "Введите ваш пароль mailcow или app-password" },
+  "options_password_hint": {
+    "message": "Пароль хранится локально в этом профиле Thunderbird, никуда не передаётся кроме указанного сервера. Используется для аутентификации в middleware."
+  },
+  "options_partial_config_hint": { "message": "Адрес сервера задан администратором. Введите ваш пароль для подключения." },
+  "options_field_mailbox":     { "message": "Ящик" },
+  "options_field_mailbox_placeholder": { "message": "user@example.com" },
+  "options_apikey_show":       { "message": "Показать" },
+  "options_apikey_hide":       { "message": "Скрыть" },
+  "options_source_managed":    { "message": "Источник: Enterprise Policy (адрес задан политикой)." },
+  "options_source_manual":     { "message": "Источник: ручная настройка." },
+  "options_source_none":       { "message": "Конфигурация не задана. Введите параметры подключения или попросите администратора настроить policies.json (пример см. в README)." },
+  "options_save_config":       { "message": "Сохранить" },
+  "options_saved_ok":          { "message": "Сохранено." },
+  "options_test_ok":           { "message": "Соединение установлено." },
+  "options_test_fail":         {
+    "message": "Не удалось подключиться: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "options_mailbox_info": {
+    "message": "Все правила будут применяться к ящику $NAME$.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "options_mailbox_unknown":   { "message": "Ящик не определён. Укажите его в поле выше." },
+  "options_about_version":     { "message": "Версия:" },
+  "options_about_repo":        { "message": "Репозиторий:" },
+  "options_about_deploy":      { "message": "Документация:" },
+  "options_about_contact":     { "message": "Контакт:" },
+  "options_about_license":     { "message": "Лицензия:" },
+  "options_about_password_warning": {
+    "message": "Пароль почтового ящика хранится в storage.local в открытом виде. Используйте app-password при возможности."
+  },
+
+  "tb_new":              { "message": "Создать новый фильтр" },
+  "tb_new_short":        { "message": "Создать" },
+  "tb_edit":             { "message": "Редактировать выбранный фильтр" },
+  "tb_edit_short":       { "message": "Изменить" },
+  "tb_duplicate":        { "message": "Дублировать выбранный фильтр" },
+  "tb_duplicate_short":  { "message": "Дублировать" },
+  "tb_delete":           { "message": "Удалить выбранный фильтр" },
+  "tb_delete_short":     { "message": "Удалить" },
+  "tb_validate_disabled":{ "message": "Проверить (доступно в следующих версиях)" },
+  "tb_validate_short":   { "message": "Проверить" },
+  "tb_reload":           { "message": "Обновить список" },
+  "tb_reload_short":     { "message": "Обновить" },
+  "tb_wizard":           { "message": "Создать фильтр из открытого письма" },
+  "tb_wizard_short":     { "message": "Из письма…" },
+  "tb_wizard_no_message":{ "message": "Откройте письмо в Thunderbird и попробуйте снова." },
+  "tb_settings":         { "message": "Настройки подключения" },
+  "tb_help":             { "message": "Справка" },
+
+  "mgr_title":           { "message": "Фильтры сообщений" },
+  "mgr_filters_for":     { "message": "Фильтры для:" },
+  "mgr_no_accounts":     { "message": "— нет аккаунтов —" },
+  "mgr_search_placeholder": { "message": "Поиск фильтров по имени…" },
+  "mgr_hint_active_run": { "message": "Включённые фильтры запускаются автоматически." },
+  "mgr_col_name":        { "message": "Имя фильтра" },
+  "mgr_col_active":      { "message": "Включён" },
+  "mgr_empty_text":      { "message": "У вас пока нет фильтров." },
+  "mgr_empty_create":    { "message": "Создать первое правило" },
+  "mgr_loading":         { "message": "Загрузка…" },
+  "mgr_no_config_title": { "message": "Конфигурация не задана" },
+  "mgr_no_config_text":  { "message": "Откройте настройки подключения и введите параметры (адрес middleware и пароль)." },
+  "mgr_no_config_partial": { "message": "Адрес middleware задан администратором. Введите пароль в настройках." },
+  "mgr_open_settings":   { "message": "Открыть настройки подключения" },
+  "mgr_error_title":     { "message": "Ошибка" },
+  "mgr_retry":           { "message": "Повторить" },
+  "mgr_log":             { "message": "Журнал…" },
+  "mgr_confirm_delete_title": { "message": "Удалить правило?" },
+  "mgr_confirm_delete":  {
+    "message": "Удалить правило «$NAME$»? Действие нельзя отменить.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "mgr_copy_suffix":     { "message": "(копия)" },
+
+  "side_new":      { "message": "Создать…" },
+  "side_new_from_template": { "message": "Создать из шаблона…" },
+  "side_edit":     { "message": "Изменить…" },
+  "side_delete":   { "message": "Удалить" },
+  "side_top":      { "message": "В начало" },
+  "side_up":       { "message": "Выше" },
+  "side_down":     { "message": "Ниже" },
+  "side_bottom":   { "message": "В конец" },
+  "side_validate": { "message": "Проверить" },
+
+  "ed_standalone_title": { "message": "Редактор фильтра" },
+  "ed_title_new":        { "message": "Новое правило" },
+  "ed_title_edit":       { "message": "Редактирование правила" },
+  "ed_name_placeholder": { "message": "Например: Newsletter" },
+  "ed_apply_when":       { "message": "Применять фильтр при:" },
+  "ed_apply_when_value": { "message": "Доставке (всегда) — Sieve" },
+  "ed_apply_when_info":  { "message": "Sieve-фильтры работают на сервере при получении письма. Локальные триггеры Thunderbird неприменимы." },
+  "ed_actions_label":    { "message": "Производить следующие действия:" },
+  "ed_show_sieve":       { "message": "Показать Sieve-код" },
+  "ed_confirm_discard":  { "message": "Изменения не сохранены. Закрыть редактор?" },
+
+  "wiz_title":            { "message": "Создать фильтр" },
+  "wiz_title_full":       { "message": "Серверные Sieve-фильтры · Создать фильтр" },
+  "wiz_section_templates":{ "message": "Шаблоны" },
+  "wiz_section_actions":  { "message": "Действия" },
+  "wiz_section_next":     { "message": "Следующие шаги" },
+  "wiz_section_description": { "message": "Описание" },
+  "wiz_section_message":  { "message": "Письмо" },
+
+  "wiz_template_sender":     { "message": "По отправителю" },
+  "wiz_template_sender_desc":{ "message": "Самый популярный шаблон: адрес отправителя используется как критерий «От» фильтра. Вся переписка с этим контактом перемещается в выбранную папку." },
+  "wiz_template_domain":     { "message": "По домену отправителя" },
+  "wiz_template_domain_desc":{ "message": "Условие на домен отправителя. Подходит, чтобы собрать в одну папку всю почту от компании или сервиса." },
+  "wiz_template_recipient":     { "message": "По адресату" },
+  "wiz_template_recipient_desc":{ "message": "Условие на «Кому». Подходит, если вам приходят письма на разные алиасы и нужно различать их по адресу-получателю." },
+  "wiz_template_reply_to":     { "message": "По обратному адресу" },
+  "wiz_template_reply_to_desc":{ "message": "Условие на заголовок Reply-To. Полезно для рассылок с явно указанным адресом для ответа." },
+  "wiz_template_no_reply_to":  { "message": "В письме нет заголовка Reply-To." },
+  "wiz_template_subject":     { "message": "По теме" },
+  "wiz_template_subject_desc":{ "message": "Фильтр срабатывает, если тема письма содержит указанный фрагмент. Имя фильтра берётся из темы (обрезается до 40 символов)." },
+  "wiz_template_list":     { "message": "Список рассылки" },
+  "wiz_template_list_desc":{ "message": "Условие на заголовок List-Id. Идеально для писем рассылок." },
+  "wiz_template_no_list_id":{ "message": "В письме нет заголовка List-Id." },
+  "wiz_template_tags":     { "message": "По меткам" },
+  "wiz_template_tags_desc":{ "message": "Шаблон использует ярлыки Thunderbird. Будет доступен в следующих версиях." },
+  "wiz_template_tags_disabled": { "message": "Шаблон по меткам будет доступен в следующих версиях." },
+  "wiz_template_recipient_disabled_own": { "message": "Письмо адресовано только вашим собственным адресам — фильтр «По адресату» не имеет смысла." },
+
+  "wiz_act_fileinto":  { "message": "Папка для сохранения" },
+  "wiz_act_tags":      { "message": "Метки" },
+  "wiz_act_important": { "message": "Важность" },
+  "wiz_act_star":      { "message": "Звёздочка" },
+  "wiz_act_flag":      { "message": "Флаг" },
+  "wiz_post_mvp":      { "message": "скоро" },
+  "wiz_no_folders":    { "message": "— нет папок —" },
+
+  "wiz_next_open_editor":  { "message": "Открыть редактор правил" },
+  "wiz_next_open_manager": { "message": "Открыть список фильтров" },
+
+  "wiz_msg_author":     { "message": "Автор:" },
+  "wiz_msg_recipients": { "message": "Получатели:" },
+  "wiz_msg_subject":    { "message": "Тема:" },
+  "wiz_msg_date":       { "message": "Дата:" },
+  "wiz_msg_size":       { "message": "Размер:" },
+  "wiz_msg_error":      { "message": "Не удалось загрузить данные письма." },
+  "wiz_no_message":     { "message": "Откройте сообщение и попробуйте снова." },
+  "wiz_no_template_selected": { "message": "Выберите шаблон." },
+  "wiz_create":         { "message": "Создать новый фильтр…" },
+
+  "ctx_create_filter_from_message": { "message": "Создать фильтр из этого письма…" },
+
+  "mgr_lazy_auth_title": { "message": "Введите пароль" },
+  "mgr_lazy_auth_info":  { "message": "Для ящика {0} ещё не задан пароль для доступа к серверу фильтров.",
+    "placeholders": { "0": { "content": "$1" } }
+  },
+  "mgr_no_imap_accounts": { "message": "В Thunderbird нет настроенных IMAP/POP3 аккаунтов. Сначала добавьте аккаунт почты в Thunderbird." },
+  "err_no_password":      { "message": "Введите пароль для этого ящика." },
+  "err_password_required":{ "message": "Пароль обязателен." },
+  "options_no_accounts":  { "message": "В Thunderbird не найдено IMAP/POP3 аккаунтов." },
+  "options_baseurl_global": { "message": "Адрес middleware (по умолчанию)" },
+  "options_password_set":   { "message": "задан" },
+  "options_import_password_tb": { "message": "Импортировать из Thunderbird" },
+  "options_import_ok":      { "message": "Пароль импортирован из настроек Thunderbird." },
+  "options_import_not_found": { "message": "Пароль не найден в настройках Thunderbird (введите вручную)." },
+  "options_import_unavailable": { "message": "Импорт недоступен — версия Thunderbird не поддерживает Experiment API плагина." },
+  "options_migration_failed": {
+    "message": "Старая конфигурация для {0} не была мигрирована автоматически (аккаунт не найден в Thunderbird). Введите пароль вручную.",
+    "placeholders": { "0": { "content": "$1" } }
+  },
+  "ed_for_mailbox":         { "message": "Для ящика" },
+
+  "options_section_accounts":   { "message": "Аккаунты" },
+  "options_section_about":      { "message": "О плагине" },
+  "options_section_behavior":   { "message": "Поведение мастера и редактора" },
+  "options_beh_strip_prefixes": { "message": "Удалять префиксы темы при создании фильтра «По теме»" },
+  "options_beh_strip_prefixes_label": { "message": "Префиксы (через запятую):" },
+  "options_beh_hide_system_folders": { "message": "Скрывать системные папки (Trash, Junk, Drafts, …) в списках выбора" },
+  "options_beh_exclude_own":    { "message": "Исключать мои email-адреса при создании фильтра «По адресату»" },
+  "options_beh_new_position_label": { "message": "Новое правило вставляется:" },
+  "options_beh_new_position_end":   { "message": "В конец списка (по умолчанию)" },
+  "options_beh_new_position_top":   { "message": "В начало списка" },
+  "options_status_ok":          { "message": "Готово" },
+  "options_status_need_password": { "message": "Нужен пароль" },
+  "options_status_need_setup":  { "message": "Требуется настройка" },
+  "options_url_auto":           { "message": "авто" },
+  "options_url_managed":        { "message": "политика" },
+  "options_url_override":       { "message": "вручную" },
+  "options_url_global":         { "message": "глобальный" },
+  "options_url_none":           { "message": "не определён" },
+  "options_url_label":          { "message": "Сервер:" },
+  "options_pwd_label":          { "message": "Пароль:" },
+  "options_pwd_storage":        { "message": "сохранён в плагине" },
+  "options_pwd_experiment":     { "message": "подтянется из Thunderbird" },
+  "options_pwd_none":           { "message": "не задан" },
+  "options_advanced":           { "message": "Дополнительно" },
+  "options_advanced_hide":      { "message": "Скрыть дополнительно" },
+  "options_import_btn":         { "message": "Импортировать из Thunderbird" },
+  "options_test_btn":           { "message": "Проверить соединение" },
+  "options_set_manually_btn":   { "message": "Указать вручную" },
+  "options_save_override":      { "message": "Сохранить override" },
+  "options_reset_override":     { "message": "Сбросить override" },
+  "options_url_default_hint":   {
+    "message": "По умолчанию = https://$HOST$/sieve-proxy",
+    "placeholders": { "host": { "content": "$1" } }
+  },
+  "options_url_override_label": { "message": "URL middleware (override)" },
+  "options_pwd_override_label": { "message": "Пароль (override)" },
+  "options_pwd_storage_set":    { "message": "Пароль сохранён в плагине." },
+  "options_pwd_experiment_avail": { "message": "Пароль будет автоматически подтянут из настроек Thunderbird при первом обращении." },
+  "options_pwd_none_long":      { "message": "Пароль не сохранён и не доступен из Thunderbird. Введите вручную или импортируйте." },
+  "options_url_auto_long":      {
+    "message": "Адрес middleware определён автоматически по IMAP-хосту: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_managed_long":   {
+    "message": "Адрес middleware задан Enterprise Policy: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_override_long":  {
+    "message": "Адрес middleware: $URL$ (override)",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_global_long":    {
+    "message": "Адрес middleware: $URL$ (глобальный)",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_none_long":      { "message": "Адрес middleware не определён. Укажите его в разделе «Дополнительно»." },
+  "options_about_storage_warning": {
+    "message": "Пароль почтового ящика хранится в storage.local в открытом виде. Используйте app-password при возможности."
+  },
+  "options_test_inline_ok":     { "message": "Соединение установлено." },
+  "options_test_inline_fail":   {
+    "message": "Ошибка: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "mgr_run_in_folder":  { "message": "Запустить выбранное правило в папке:" },
+  "mgr_run_pick_folder":{ "message": "Выбрать папку…" },
+  "mgr_run_btn":        { "message": "Запустить" },
+
+  "run_title":          { "message": "Применение правила…" },
+  "run_status_init":    { "message": "Готовлю…" },
+  "run_status_progress":{
+    "message": "Обработано $N$ из $M$, изменено $K$",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "m": { "content": "$2" },
+      "k": { "content": "$3" }
+    }
+  },
+  "run_status_progress_unknown": {
+    "message": "Обработано $N$, изменено $K$",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "k": { "content": "$2" }
+    }
+  },
+  "run_summary": {
+    "message": "Готово. Обработано: $N$. Совпало: $M$. Изменено: $K$.",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "m": { "content": "$2" },
+      "k": { "content": "$3" }
+    }
+  },
+  "run_canceled":       { "message": "Прервано пользователем." },
+  "run_done":           { "message": "Готово." },
+  "run_no_match":       { "message": "Ни одно письмо не подошло под условия." },
+  "run_no_messages":    { "message": "В папке нет писем для обработки." },
+  "run_skipped_redirect": { "message": "Действие «перенаправить» не выполнено: оно работает только при доставке (на сервере)." },
+  "run_errors":         {
+    "message": "Ошибки: $N$.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "run_no_selection":   { "message": "Сначала выберите правило в списке." },
+  "run_no_folder":      { "message": "Выберите папку." },
+
+  "tb_import_local":       { "message": "Импортировать локальные фильтры из Thunderbird" },
+  "tb_import_local_short": { "message": "Импорт" },
+
+  "import_dialog_title":   { "message": "Импорт локальных фильтров Thunderbird" },
+  "import_loading":        { "message": "Загружаю локальные фильтры…" },
+  "import_no_experiment":  { "message": "Импорт недоступен в этой версии Thunderbird (нет Experiment API)." },
+  "import_empty":          { "message": "Локальные фильтры для этого аккаунта не найдены." },
+  "import_intro": {
+    "message": "Найдено $N$ фильтров для аккаунта $ACCOUNT$:",
+    "placeholders": {
+      "n":       { "content": "$1" },
+      "account": { "content": "$2" }
+    }
+  },
+  "import_summary": {
+    "message": "Будет импортировано: $N$ из $T$. Остальные пропущены.",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "t": { "content": "$2" }
+    }
+  },
+  "import_badge_ok":       { "message": "✓ совместим" },
+  "import_badge_partial":  { "message": "⚠ частично" },
+  "import_badge_skip":     { "message": "✕ несовместим" },
+  "import_warnings_summary":{ "message": "Подробнее о пропущенных правилах…" },
+  "import_cleanup_label":  { "message": "Удалить локальные фильтры после импорта (advanced)" },
+  "import_cleanup_hint":   { "message": "Доступно в следующих версиях" },
+  "import_btn_confirm":    { "message": "Импортировать" },
+  "import_done": {
+    "message": "Импортировано $N$ фильтров.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_partial_errors": {
+    "message": "Импортировано $N$, с ошибками $E$.",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "e": { "content": "$2" }
+    }
+  },
+
+  "options_import_local_btn":         { "message": "Импортировать фильтры из Thunderbird" },
+  "options_import_local_unavailable": { "message": "Импорт недоступен в этой версии Thunderbird." },
+  "options_import_local_empty":       { "message": "Локальные фильтры для этого аккаунта не найдены." },
+  "options_import_local_no_compat": {
+    "message": "Найдено $N$ фильтров, ни один не совместим — импорт невозможен.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "options_import_local_confirm": {
+    "message": "Импортировать $N$ из $T$ локальных фильтров?",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "t": { "content": "$2" }
+    }
+  },
+  "options_import_local_done": {
+    "message": "Импортировано $N$ фильтров.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+
+  "mgr_confirm_delete_many": {
+    "message": "Удалить выбранные правила ($N$ шт.)?",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+
+  "wiz_name_sender": {
+    "message": "От $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_domain": {
+    "message": "Домен $DOMAIN$",
+    "placeholders": { "domain": { "content": "$1" } }
+  },
+  "wiz_name_recipient": {
+    "message": "Кому $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_reply_to": {
+    "message": "Reply-To $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_subject": {
+    "message": "Тема: $TEXT$",
+    "placeholders": { "text": { "content": "$1" } }
+  },
+  "wiz_name_list": {
+    "message": "Список рассылки"
+  }
+}

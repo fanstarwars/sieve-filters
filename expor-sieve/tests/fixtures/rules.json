@@ -1,0 +1,268 @@
+{
+  "_comment": "Фикстуры для тестов SieveAdapter. Каждый элемент: rule (вход для ruleToSieve) + sieve (ожидаемый вывод). Round-trip: sieveToRule(sieve) должен вернуть { matchAll, conditions, actions, stopAfter } совпадающие с rule.",
+  "fixtures": [
+    {
+      "name": "single-from-contains-fileinto",
+      "rule": {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "От @silver.ru -> Силвер",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "from",
+            "op": "contains",
+            "value": "@silver.ru"
+          }
+        ],
+        "actions": [
+          {
+            "type": "fileinto",
+            "folder": "Силвер"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif address :contains \"from\" \"@silver.ru\" {\n  fileinto \"Силвер\";\n  stop;\n}\n"
+    },
+    {
+      "name": "anyof-from-list-fileinto-flag",
+      "rule": {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "name": "Силвер anyof",
+        "active": true,
+        "matchAll": false,
+        "conditions": [
+          {
+            "field": "from",
+            "op": "contains",
+            "value": "nicole"
+          },
+          {
+            "field": "from",
+            "op": "contains",
+            "value": "@silver.ru"
+          }
+        ],
+        "actions": [
+          {
+            "type": "fileinto",
+            "folder": "Силвер"
+          },
+          {
+            "type": "flag"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"imap4flags\"];\n\nif anyof (\n  address :contains \"from\" \"nicole\",\n  address :contains \"from\" \"@silver.ru\"\n) {\n  fileinto \"Силвер\";\n  addflag \"\\\\Flagged\";\n  stop;\n}\n"
+    },
+    {
+      "name": "subject-contains-any-flag",
+      "rule": {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "name": "Счета звёздочкой",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "subject",
+            "op": "contains_any",
+            "value": [
+              "счёт",
+              "invoice",
+              "发票"
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "type": "flag"
+          }
+        ],
+        "stopAfter": false
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"imap4flags\"];\n\nif header :contains \"subject\" [\"счёт\", \"invoice\", \"发票\"] {\n  addflag \"\\\\Flagged\";\n}\n"
+    },
+    {
+      "name": "to-not-contains-discard",
+      "rule": {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "name": "Не нам -> в /dev/null",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "to",
+            "op": "not_contains",
+            "value": "@expor.ru"
+          }
+        ],
+        "actions": [
+          {
+            "type": "discard"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nif not address :contains \"to\" \"@expor.ru\" {\n  discard;\n  stop;\n}\n"
+    },
+    {
+      "name": "cc-is-mark-read-trash",
+      "rule": {
+        "id": "55555555-5555-5555-5555-555555555555",
+        "name": "Рассылка -> прочитано + Trash",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "cc",
+            "op": "is",
+            "value": "list@example.com"
+          }
+        ],
+        "actions": [
+          {
+            "type": "mark_read"
+          },
+          {
+            "type": "trash"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"imap4flags\", \"fileinto\"];\n\nif address :is \"cc\" \"list@example.com\" {\n  addflag \"\\\\Seen\";\n  fileinto \"Trash\";\n  stop;\n}\n"
+    },
+    {
+      "name": "header-custom-starts-redirect",
+      "rule": {
+        "id": "66666666-6666-6666-6666-666666666666",
+        "name": "X-Spam редирект",
+        "active": false,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "header",
+            "headerName": "X-Spam-Flag",
+            "op": "starts",
+            "value": "YES"
+          }
+        ],
+        "actions": [
+          {
+            "type": "redirect",
+            "address": "spam@expor.ru"
+          }
+        ],
+        "stopAfter": false
+      },
+      "sieve": "# expor-sieve v1 managed\nif header :matches \"X-Spam-Flag\" \"YES*\" {\n  redirect \"spam@expor.ru\";\n}\n"
+    },
+    {
+      "name": "size-over-mb-copy",
+      "rule": {
+        "id": "77777777-7777-7777-7777-777777777777",
+        "name": "Большие письма -> Архив (копия)",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "size",
+            "op": "gt",
+            "value": 5,
+            "unit": "MB"
+          }
+        ],
+        "actions": [
+          {
+            "type": "copy",
+            "folder": "Архив/Большие"
+          }
+        ],
+        "stopAfter": false
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"copy\"];\n\nif size :over 5M {\n  fileinto :copy \"Архив/Большие\";\n}\n"
+    },
+    {
+      "name": "size-under-kb",
+      "rule": {
+        "id": "88888888-8888-8888-8888-888888888888",
+        "name": "Мелкие в Inbox/Tiny",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "size",
+            "op": "lt",
+            "value": 2,
+            "unit": "KB"
+          }
+        ],
+        "actions": [
+          {
+            "type": "fileinto",
+            "folder": "Inbox/Tiny"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif size :under 2K {\n  fileinto \"Inbox/Tiny\";\n  stop;\n}\n"
+    },
+    {
+      "name": "attachment-allof-from-and-has",
+      "rule": {
+        "id": "99999999-9999-9999-9999-999999999999",
+        "name": "Контрагент с вложением -> Договоры",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "from",
+            "op": "contains",
+            "value": "@partner.ru"
+          },
+          {
+            "field": "attachment",
+            "op": "has_attachment"
+          }
+        ],
+        "actions": [
+          {
+            "type": "fileinto",
+            "folder": "Договоры"
+          }
+        ],
+        "stopAfter": true
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif allof (\n  address :contains \"from\" \"@partner.ru\",\n  header :contains \"content-type\" \"multipart/\"\n) {\n  fileinto \"Договоры\";\n  stop;\n}\n"
+    },
+    {
+      "name": "subject-ends-no-attachment",
+      "rule": {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "Уведомления без вложений -> Notifications",
+        "active": true,
+        "matchAll": true,
+        "conditions": [
+          {
+            "field": "subject",
+            "op": "ends",
+            "value": "[notification]"
+          },
+          {
+            "field": "attachment",
+            "op": "no_attachment"
+          }
+        ],
+        "actions": [
+          {
+            "type": "fileinto",
+            "folder": "Notifications"
+          }
+        ],
+        "stopAfter": false
+      },
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif allof (\n  header :matches \"subject\" \"*[notification]\",\n  not header :contains \"content-type\" \"multipart/\"\n) {\n  fileinto \"Notifications\";\n}\n"
+    }
+  ]
+}

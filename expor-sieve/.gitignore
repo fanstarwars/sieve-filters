@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.xpi
+.DS_Store
+.idea/
+.vscode/
+web-ext-artifacts/

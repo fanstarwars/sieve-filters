@@ -1,0 +1,32 @@
+# Build & node
+**/node_modules/
+**/web-ext-artifacts/
+**/.web-ext-build*/
+**/dist/
+**/*.xpi
+
+# Python
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+**/htmlcov/
+**/.coverage
+**/*.egg-info/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+
+# Local notes
+.claude/
+TZ-private/
+
+# Local secrets / build temps
+*.env.local
+.expor-sieve-proxy.env
+/tmp/

@@ -1,0 +1,230 @@
+/* editor.css — стили модала Filter Editor.
+ * Используется и как standalone и как <dialog> внутри Manager/Wizard.
+ * Vars наследуются от родительского документа (manager.css/wizard.css).
+ */
+
+.ed-dialog {
+  width: min(720px, 95vw);
+  max-height: 90vh;
+  padding: 0;
+  background: var(--bg, #fff);
+  color: var(--fg, #1d1d1f);
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 8px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+}
+.ed-dialog::backdrop { background: rgba(0,0,0,.4); }
+
+.ed-form {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  min-height: 320px;
+}
+.ed-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #d2d2d7);
+  background: var(--bg-alt, #f5f5f7);
+  border-radius: 8px 8px 0 0;
+}
+.ed-head h3 { margin: 0; font-size: 15px; }
+.ed-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─────── Поля формы ─────── */
+.ed-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.ed-row > label { color: var(--fg-muted, #6e6e73); }
+.ed-row input[type=text],
+.ed-row input[type=email],
+.ed-row select {
+  width: 100%;
+}
+.ed-name-input {
+  font-size: 14px;
+  padding: 5px 8px;
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  background: var(--bg, #fff);
+  color: var(--fg, #1d1d1f);
+}
+
+.ed-section {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--bg-alt, #f5f5f7);
+  border-radius: 6px;
+}
+.ed-section-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--fg-muted, #6e6e73);
+}
+
+.ed-info {
+  font-size: 12px;
+  color: var(--fg-muted, #6e6e73);
+  background: var(--bg-alt, #f5f5f7);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin: 4px 0 10px;
+}
+
+.ed-radios { display: flex; gap: 16px; }
+.ed-radios label { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ─────── Динамические строки условий и действий ─────── */
+.ed-rows { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.ed-row-line {
+  display: grid;
+  grid-template-columns: 130px 130px 1fr 28px 28px;
+  gap: 6px;
+  align-items: center;
+}
+.ed-action-line {
+  display: grid;
+  grid-template-columns: 180px 1fr 28px 28px;
+  gap: 6px;
+  align-items: center;
+}
+.ed-row-line input,
+.ed-row-line select,
+.ed-action-line input,
+.ed-action-line select {
+  padding: 5px 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  height: 28px;
+}
+.ed-mini-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  background: var(--bg, #fff);
+  color: var(--fg, #1d1d1f);
+  cursor: pointer;
+  padding: 0;
+  font-weight: 700;
+  line-height: 1;
+}
+.ed-mini-btn:hover:not(:disabled) { background: var(--hover, #e8e8ed); }
+.ed-mini-btn:disabled { opacity: .4; cursor: default; }
+
+.ed-warn {
+  grid-column: 1 / -1;
+  background: rgba(183, 90, 0, .12);
+  color: var(--warning, #b75a00);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.ed-checkrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.ed-help {
+  color: var(--fg-muted, #6e6e73);
+  font-size: 11px;
+  cursor: help;
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ed-error {
+  color: var(--danger, #d70015);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.ed-error[hidden] { display: none; }
+
+/* ─────── Footer ─────── */
+.ed-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border, #d2d2d7);
+  background: var(--bg-alt, #f5f5f7);
+  border-radius: 0 0 8px 8px;
+}
+.ed-footer button {
+  padding: 6px 16px;
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  background: var(--bg, #fff);
+  color: var(--fg, #1d1d1f);
+  cursor: pointer;
+  font: inherit;
+  height: 30px;
+}
+.ed-footer button:hover:not(:disabled) { background: var(--hover, #e8e8ed); }
+.ed-footer button:disabled { opacity: .5; cursor: default; }
+.ed-footer button.primary {
+  background: var(--primary, #0066cc);
+  color: var(--primary-fg, #fff);
+  border-color: var(--primary, #0066cc);
+}
+.ed-footer button.primary:hover:not(:disabled) { filter: brightness(1.05); }
+
+/* Sieve-preview details */
+.ed-sieve-details {
+  margin-top: 12px;
+  background: var(--bg-alt, #f5f5f7);
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+.ed-sieve-details > summary {
+  cursor: pointer;
+  color: var(--link, #0066cc);
+}
+.ed-sieve-pre {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+}
+
+/* ──────── Account badge (multi-account) ──────── */
+.ed-account-badge {
+  font-size: 12px;
+  color: var(--fg-muted, #6e6e73);
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  background: var(--bg-alt, #f5f5f7);
+  border-radius: 4px;
+  display: inline-block;
+}
+.ed-account-badge .ed-account-email {
+  font-family: monospace;
+  color: var(--fg, #1d1d1f);
+}

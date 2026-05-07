@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="ed_standalone_title">Редактор фильтра</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <!--
+    Этот файл существует только для случая, когда Editor открыт как самостоятельная
+    страница (например, дебаг). В Manager и Wizard Editor рендерится как <dialog>
+    через editor.js → openEditor(...).
+  -->
+  <dialog id="editorDialog" class="ed-dialog" open>
+    <div class="ed-form">
+      <header class="ed-head">
+        <h3 id="edTitle" data-i18n="ed_title_new">Новое правило</h3>
+      </header>
+      <div id="edBody" class="ed-body"></div>
+    </div>
+  </dialog>
+  <script type="module">
+    import { openEditor } from './editor.js';
+    import { newRule } from '../lib/rule_model.js';
+    import { t } from '../lib/rule_form.js';
+    document.title = t('ed_standalone_title');
+    document.getElementById('edTitle').textContent = t('ed_title_new');
+    openEditor({
+      dialog: document.getElementById('editorDialog'),
+      host: document.getElementById('edBody'),
+      draft: newRule(),
+      folders: [],
+      onCancel: () => window.close(),
+      onSave: async () => null,
+    });
+  </script>
+</body>
+</html>

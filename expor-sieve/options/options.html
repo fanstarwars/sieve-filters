@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="options_title">Серверные фильтры — настройки</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 data-i18n="options_title">Серверные фильтры — настройки</h1>
+  </header>
+
+  <main class="content">
+    <!-- Раздел: Аккаунты — карточки с авто-выведенным статусом -->
+    <section id="section-accounts" class="section">
+      <h2 data-i18n="options_section_accounts">Аккаунты</h2>
+      <div id="accountsHost"></div>
+    </section>
+
+    <!-- Раздел: Поведение мастера и редактора -->
+    <section id="section-behavior" class="section">
+      <h2 data-i18n="options_section_behavior">Поведение мастера и редактора</h2>
+      <div class="behavior-card" id="behaviorCard">
+        <div class="beh-row">
+          <label class="beh-checkrow">
+            <input type="checkbox" id="behStripPrefixes">
+            <span data-i18n="options_beh_strip_prefixes">Удалять префиксы темы при создании фильтра «По теме»</span>
+          </label>
+          <div class="beh-sub">
+            <label class="beh-sublabel" data-i18n="options_beh_strip_prefixes_label" for="behSubjectPrefixes">Префиксы (через запятую):</label>
+            <input type="text" id="behSubjectPrefixes" class="beh-input" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="beh-row">
+          <label class="beh-checkrow">
+            <input type="checkbox" id="behHideSystemFolders">
+            <span data-i18n="options_beh_hide_system_folders">Скрывать системные папки (Trash, Junk, Drafts, …) в списках выбора</span>
+          </label>
+        </div>
+
+        <div class="beh-row">
+          <label class="beh-checkrow">
+            <input type="checkbox" id="behExcludeOwn">
+            <span data-i18n="options_beh_exclude_own">Исключать мои email-адреса при создании фильтра «По адресату»</span>
+          </label>
+        </div>
+
+        <div class="beh-row">
+          <div class="beh-label" data-i18n="options_beh_new_position_label">Новое правило вставляется:</div>
+          <label class="beh-radio">
+            <input type="radio" name="behNewPosition" value="end">
+            <span data-i18n="options_beh_new_position_end">В конец списка (по умолчанию)</span>
+          </label>
+          <label class="beh-radio">
+            <input type="radio" name="behNewPosition" value="top">
+            <span data-i18n="options_beh_new_position_top">В начало списка</span>
+          </label>
+        </div>
+
+        <div class="beh-actions">
+          <button type="button" class="primary" id="behSaveBtn" data-i18n="btn_save">Сохранить</button>
+          <span class="beh-toast" id="behToast" hidden></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Раздел: О плагине -->
+    <section id="section-about" class="section">
+      <h2 data-i18n="options_section_about">О плагине</h2>
+      <ul class="about-list">
+        <li>
+          <span class="about-key" data-i18n="options_about_version">Version:</span>
+          <span id="aboutVersion"></span>
+        </li>
+        <li>
+          <span class="about-key" data-i18n="options_about_repo">Repository:</span>
+          <a id="aboutRepo" href="https://github.com/&lt;owner&gt;/expor-sieve" target="_blank" rel="noopener">github.com/&lt;owner&gt;/expor-sieve</a>
+        </li>
+        <li>
+          <span class="about-key" data-i18n="options_about_deploy">Documentation:</span>
+          <a id="aboutDeploy" href="https://github.com/&lt;owner&gt;/expor-sieve/blob/main/DEPLOYMENT.md" target="_blank" rel="noopener">DEPLOYMENT.md</a>
+        </li>
+        <li>
+          <span class="about-key" data-i18n="options_about_license">License:</span>
+          <span>GPL-3.0-or-later</span>
+        </li>
+      </ul>
+      <div class="banner warn" data-i18n="options_about_storage_warning">
+        The mailbox password is stored in plain text in storage.local. Use an app-password whenever possible.
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

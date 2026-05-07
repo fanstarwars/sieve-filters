@@ -1,0 +1,19 @@
+{
+  "_comment": "Sample Mozilla Enterprise Policy for centrally installing and pre-configuring the expor-sieve add-on. Drop this file as distribution/policies.json inside the Thunderbird install (or in the OS-wide policies directory). See README.md → Deployment. Starting with v0.2.0 the managed policy carries ONLY the middleware baseUrl — no secrets; each user enters their own password.",
+  "policies": {
+    "ExtensionSettings": {
+      "expor-sieve@expor.ru": {
+        "installation_mode": "force_installed",
+        "install_url": "https://example.com/addons/expor-sieve.xpi",
+        "updates_disabled": false
+      }
+    },
+    "3rdparty": {
+      "Extensions": {
+        "expor-sieve@expor.ru": {
+          "baseUrl": "https://mail.example.com/sieve-proxy"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "expor-sieve",
+  "version": "0.11.0",
+  "description": "Manage server-side Sieve mail filters in mailcow directly from Thunderbird/Betterbird.",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "lint": "web-ext lint --source-dir=.",
+    "run": "web-ext run --source-dir=. --target=thunderbird",
+    "build": "web-ext build --source-dir=. --artifacts-dir=../dist --overwrite-dest",
+    "sign": "web-ext sign --source-dir=. --artifacts-dir=../dist --channel=unlisted",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "web-ext": "^8.3.0"
+  },
+  "webExt": {
+    "sourceDir": ".",
+    "ignoreFiles": [
+      "package.json",
+      "package-lock.json",
+      "node_modules",
+      "tests",
+      "policies.example.json",
+      "README.md"
+    ]
+  }
+}

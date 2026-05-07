@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="wiz_title">Создать фильтр</title>
+  <link rel="stylesheet" href="wizard.css">
+  <link rel="stylesheet" href="../editor/editor.css">
+</head>
+<body>
+  <div class="wiz-app">
+    <header class="wiz-head">
+      <span class="wiz-icons" aria-hidden="true">
+        <img src="../icons/lucide/wand-sparkles.svg" class="i-large" alt="">
+      </span>
+      <h1 class="wiz-title" data-i18n="wiz_title_full">Server-side Sieve filters · Create filter</h1>
+      <button type="button" class="wiz-help" id="wizHelp" data-i18n-title="tb_help">
+        <img src="../icons/lucide/circle-help.svg" class="i" alt="">
+      </button>
+    </header>
+
+    <section class="wiz-cols">
+      <fieldset class="wiz-col">
+        <legend data-i18n="wiz_section_templates">Шаблоны</legend>
+        <ul id="wizTemplates" class="wiz-list" role="radiogroup"></ul>
+      </fieldset>
+
+      <fieldset class="wiz-col">
+        <legend data-i18n="wiz_section_actions">Действия</legend>
+        <ul class="wiz-list">
+          <li>
+            <label>
+              <input type="checkbox" id="actFileinto" checked>
+              <span data-i18n="wiz_act_fileinto">Папка для сохранения</span>
+            </label>
+            <select id="actFolderSel" class="wiz-folder-sel" disabled></select>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="actTags" disabled>
+              <span data-i18n="wiz_act_tags">Метки</span>
+              <span class="wiz-soon" data-i18n="wiz_post_mvp">скоро</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="actImportant" disabled>
+              <span data-i18n="wiz_act_important">Важность</span>
+              <span class="wiz-soon" data-i18n="wiz_post_mvp">скоро</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="actStar">
+              <span data-i18n="wiz_act_star">Звёздочка</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="actFlag">
+              <span data-i18n="wiz_act_flag">Флаг</span>
+            </label>
+          </li>
+        </ul>
+      </fieldset>
+
+      <fieldset class="wiz-col">
+        <legend data-i18n="wiz_section_next">Следующие шаги</legend>
+        <ul class="wiz-list">
+          <li>
+            <label>
+              <input type="checkbox" id="nextOpenEditor" checked>
+              <span data-i18n="wiz_next_open_editor">Открыть редактор правил</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="nextOpenManager" checked>
+              <span data-i18n="wiz_next_open_manager">Открыть список фильтров</span>
+            </label>
+          </li>
+        </ul>
+      </fieldset>
+    </section>
+
+    <details class="wiz-details" open>
+      <summary data-i18n="wiz_section_description">Описание</summary>
+      <div class="wiz-desc-box" id="wizDesc"></div>
+    </details>
+
+    <details class="wiz-details" open>
+      <summary data-i18n="wiz_section_message">Письмо</summary>
+      <div class="wiz-msg-box">
+        <table class="wiz-msg-table" id="wizMessage">
+          <tbody>
+            <tr>
+              <th data-i18n="wiz_msg_author">Автор:</th>
+              <td id="msgAuthor"></td>
+            </tr>
+            <tr>
+              <th data-i18n="wiz_msg_recipients">Получатели:</th>
+              <td id="msgRecipients"></td>
+            </tr>
+            <tr>
+              <th data-i18n="wiz_msg_subject">Тема:</th>
+              <td id="msgSubject"></td>
+            </tr>
+            <tr>
+              <th data-i18n="wiz_msg_date">Дата:</th>
+              <td id="msgDate"></td>
+            </tr>
+            <tr>
+              <th data-i18n="wiz_msg_size">Размер:</th>
+              <td id="msgSize"></td>
+            </tr>
+          </tbody>
+        </table>
+        <p id="msgError" class="wiz-msg-error" hidden></p>
+      </div>
+    </details>
+
+    <div id="wizLazyAuth" class="mgr-lazy-auth wiz-lazy-auth" hidden></div>
+
+    <footer class="wiz-footer">
+      <span class="wiz-bar-spacer"></span>
+      <button type="button" class="primary" id="btnCreate" data-i18n="wiz_create">Создать новый фильтр…</button>
+      <button type="button" id="btnCancel" data-i18n="btn_cancel">Отмена</button>
+    </footer>
+  </div>
+
+  <!-- Editor dialog (открывается при «Открыть редактор правил» ☑) -->
+  <dialog id="editorDialog" class="ed-dialog" aria-labelledby="edTitle">
+    <div class="ed-form">
+      <header class="ed-head">
+        <h3 id="edTitle" data-i18n="ed_title_new">Новое правило</h3>
+      </header>
+      <div id="edBody" class="ed-body"></div>
+    </div>
+  </dialog>
+
+  <script type="module" src="wizard.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Опциональный compose для интеграционных тестов с реальными контейнерами.
+# Большинство тестов используют ASGI-моки (см. tests/integration/test_e2e.py),
+# но если нужен «полный стек» — поднимите этот compose.
+services:
+  mock-mailcow:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ../../:/app
+    command: >
+      sh -c "pip install fastapi uvicorn python-multipart >/dev/null &&
+             python -m tests.integration.mock_mailcow --host 0.0.0.0 --port 9000"
+    ports:
+      - "9000:9000"
+
+  proxy:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      MAILCOW_API_URL: "http://mock-mailcow:9000"
+      MAILCOW_API_KEY: "dev-rw-key"
+      DOVECOT_HOST: "dummy"
+      DOVECOT_USE_SSL: "false"
+      LOG_LEVEL: "DEBUG"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mock-mailcow

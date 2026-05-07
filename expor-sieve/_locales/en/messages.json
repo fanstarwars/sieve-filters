@@ -1,0 +1,493 @@
+{
+  "extension_name": {
+    "message": "Server-side Sieve filters"
+  },
+  "extension_description": {
+    "message": "Manage server-side Sieve mail filters in mailcow directly from Thunderbird/Betterbird."
+  },
+  "browser_action_title": {
+    "message": "Server-side filters"
+  },
+
+  "btn_save":  { "message": "Save" },
+  "btn_cancel": { "message": "Cancel" },
+  "btn_delete": { "message": "Delete" },
+  "btn_edit":   { "message": "Edit" },
+  "btn_duplicate": { "message": "Duplicate" },
+  "btn_test_connection": { "message": "Test connection" },
+  "btn_report_to_admin": { "message": "Report to administrator" },
+  "btn_close":  { "message": "Close" },
+  "btn_ok":     { "message": "OK" },
+
+  "rule_name": { "message": "Filter name" },
+  "rule_active": { "message": "Active" },
+  "rule_match_label": { "message": "Match the message when:" },
+  "rule_match_all": { "message": "All conditions are met" },
+  "rule_match_any": { "message": "Any condition is met" },
+  "rule_section_conditions": { "message": "Conditions" },
+  "rule_section_actions": { "message": "Perform these actions:" },
+  "rule_add_condition": { "message": "Add condition" },
+  "rule_add_action": { "message": "Add action" },
+  "rule_stop_after": { "message": "Stop processing other rules" },
+  "rule_stop_after_help": { "message": "When this rule matches, no further rules are applied to the message. Without this option, every rule whose conditions match will run — for example, the same message can both move to a folder and be flagged." },
+  "rule_remove_condition": { "message": "Remove condition" },
+  "rule_remove_action": { "message": "Remove action" },
+  "rule_header_name_placeholder": { "message": "Header name" },
+  "rule_value_placeholder": { "message": "Value" },
+  "rule_email_placeholder": { "message": "user@example.com" },
+  "rule_size_placeholder": { "message": "Size" },
+
+  "field_from": { "message": "From" },
+  "field_to":   { "message": "To" },
+  "field_cc":   { "message": "Cc" },
+  "field_subject": { "message": "Subject" },
+  "field_header": { "message": "Header" },
+  "field_size": { "message": "Size" },
+  "field_attachment": { "message": "Has attachment" },
+
+  "op_contains":     { "message": "contains" },
+  "op_not_contains": { "message": "does not contain" },
+  "op_is":           { "message": "is" },
+  "op_starts":       { "message": "starts with" },
+  "op_ends":         { "message": "ends with" },
+  "op_contains_any": { "message": "contains any of (comma-separated)" },
+  "op_gt":           { "message": "greater than" },
+  "op_lt":           { "message": "less than" },
+  "op_has_attachment": { "message": "yes" },
+  "op_no_attachment":  { "message": "no" },
+
+  "act_fileinto":  { "message": "Move to folder" },
+  "act_copy":      { "message": "Copy to folder" },
+  "act_mark_read": { "message": "Mark as read" },
+  "act_flag":      { "message": "Flag the message" },
+  "act_redirect":  { "message": "Redirect to address" },
+  "act_discard":   { "message": "Discard" },
+  "act_trash":     { "message": "Move to Trash" },
+
+  "warn_redirect": { "message": "Redirects are visible to the sender." },
+  "warn_discard":  { "message": "The message will be deleted without saving and cannot be recovered." },
+
+  "err_no_network": { "message": "No connection to the mail server. Check your internet connection." },
+  "err_auth":       { "message": "Server access denied. Contact your administrator." },
+  "err_auth_password_wrong": { "message": "The password is incorrect. Open settings and update it." },
+  "err_server":     { "message": "The mail server returned an error. Please try again later." },
+  "err_validation": {
+    "message": "Rule \"$NAME$\" has an error: $MSG$",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "msg": { "content": "$2" }
+    }
+  },
+  "err_no_managed_config": { "message": "No configuration found. Open settings and enter the connection details." },
+
+  "status_connected":    { "message": "Connected" },
+  "status_disconnected": { "message": "Not connected" },
+
+  "size_kb": { "message": "KB" },
+  "size_mb": { "message": "MB" },
+
+  "desc_arrow":      { "message": "→" },
+  "desc_in_folder":  { "message": "into $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "desc_copy_folder": { "message": "copy to $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "desc_mark_read": { "message": "mark as read" },
+  "desc_flag": { "message": "flag" },
+  "desc_redirect": { "message": "redirect to $ADDR$",
+    "placeholders": { "addr": { "content": "$1" } }
+  },
+  "desc_discard": { "message": "discard" },
+  "desc_trash": { "message": "to Trash" },
+  "desc_separator_and": { "message": " and " },
+  "desc_separator_or":  { "message": " or " },
+  "desc_more": { "message": "…$N$ more",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "desc_field_value": { "message": "$FIELD$ $OP$ $VALUE$",
+    "placeholders": {
+      "field": { "content": "$1" },
+      "op": { "content": "$2" },
+      "value": { "content": "$3" }
+    }
+  },
+  "desc_attachment_yes": { "message": "has attachment" },
+  "desc_attachment_no":  { "message": "no attachment" },
+
+  "report_subject": { "message": "Sieve filters plugin error" },
+  "report_body": {
+    "message": "Version: $VER$\nMailbox: $MAILBOX$\nError: $ERR$\n\nComment:\n",
+    "placeholders": {
+      "ver": { "content": "$1" },
+      "mailbox": { "content": "$2" },
+      "err": { "content": "$3" }
+    }
+  },
+
+  "options_title":             { "message": "Server-side filters — settings" },
+  "options_nav_connection":    { "message": "Connection" },
+  "options_nav_about":         { "message": "About" },
+  "options_field_baseurl":     { "message": "Middleware server URL" },
+  "options_field_baseurl_placeholder": { "message": "https://mail.example.com/sieve-proxy" },
+  "options_field_password":    { "message": "Mailbox password" },
+  "options_field_password_placeholder": { "message": "Enter your mailcow password or app-password" },
+  "options_password_hint": {
+    "message": "The password is stored locally in this Thunderbird profile and is sent only to the configured server. It is used to authenticate against the middleware."
+  },
+  "options_partial_config_hint": { "message": "The server URL is set by your administrator. Enter your password to connect." },
+  "options_field_mailbox":     { "message": "Mailbox" },
+  "options_field_mailbox_placeholder": { "message": "user@example.com" },
+  "options_apikey_show":       { "message": "Show" },
+  "options_apikey_hide":       { "message": "Hide" },
+  "options_source_managed":    { "message": "Source: Enterprise Policy (URL set by policy)." },
+  "options_source_manual":     { "message": "Source: manual configuration." },
+  "options_source_none":       { "message": "No configuration. Enter the connection details, or ask your administrator to provide a policies.json (see the README for an example)." },
+  "options_save_config":       { "message": "Save" },
+  "options_saved_ok":          { "message": "Saved." },
+  "options_test_ok":           { "message": "Connection successful." },
+  "options_test_fail":         {
+    "message": "Could not connect: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "options_mailbox_info": {
+    "message": "All rules will be applied to mailbox $NAME$.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "options_mailbox_unknown":   { "message": "Mailbox is not set. Specify it in the field above." },
+  "options_about_version":     { "message": "Version:" },
+  "options_about_repo":        { "message": "Repository:" },
+  "options_about_deploy":      { "message": "Documentation:" },
+  "options_about_contact":     { "message": "Contact:" },
+  "options_about_license":     { "message": "License:" },
+  "options_about_password_warning": {
+    "message": "The mailbox password is stored in plain text in storage.local. Use an app-password whenever possible."
+  },
+
+  "tb_new":              { "message": "Create a new filter" },
+  "tb_new_short":        { "message": "New" },
+  "tb_edit":             { "message": "Edit the selected filter" },
+  "tb_edit_short":       { "message": "Edit" },
+  "tb_duplicate":        { "message": "Duplicate the selected filter" },
+  "tb_duplicate_short":  { "message": "Duplicate" },
+  "tb_delete":           { "message": "Delete the selected filter" },
+  "tb_delete_short":     { "message": "Delete" },
+  "tb_validate_disabled":{ "message": "Validate (coming in a future release)" },
+  "tb_validate_short":   { "message": "Validate" },
+  "tb_reload":           { "message": "Reload list" },
+  "tb_reload_short":     { "message": "Reload" },
+  "tb_wizard":           { "message": "Create a filter from the open message" },
+  "tb_wizard_short":     { "message": "From message…" },
+  "tb_wizard_no_message":{ "message": "Open a message in Thunderbird and try again." },
+  "tb_settings":         { "message": "Connection settings" },
+  "tb_help":             { "message": "Help" },
+
+  "mgr_title":           { "message": "Message filters" },
+  "mgr_filters_for":     { "message": "Filters for:" },
+  "mgr_no_accounts":     { "message": "— no accounts —" },
+  "mgr_search_placeholder": { "message": "Search filters by name…" },
+  "mgr_hint_active_run": { "message": "Active filters run automatically." },
+  "mgr_col_name":        { "message": "Filter name" },
+  "mgr_col_active":      { "message": "Active" },
+  "mgr_empty_text":      { "message": "You have no filters yet." },
+  "mgr_empty_create":    { "message": "Create the first rule" },
+  "mgr_loading":         { "message": "Loading…" },
+  "mgr_no_config_title": { "message": "Configuration not set" },
+  "mgr_no_config_text":  { "message": "Open the connection settings and enter the details (middleware URL and password)." },
+  "mgr_no_config_partial": { "message": "The middleware URL is set by your administrator. Enter the password in the settings." },
+  "mgr_open_settings":   { "message": "Open connection settings" },
+  "mgr_error_title":     { "message": "Error" },
+  "mgr_retry":           { "message": "Retry" },
+  "mgr_log":             { "message": "Log…" },
+  "mgr_confirm_delete_title": { "message": "Delete rule?" },
+  "mgr_confirm_delete":  {
+    "message": "Delete rule “$NAME$”? This cannot be undone.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "mgr_copy_suffix":     { "message": "(copy)" },
+
+  "side_new":      { "message": "New…" },
+  "side_new_from_template": { "message": "New from template…" },
+  "side_edit":     { "message": "Edit…" },
+  "side_delete":   { "message": "Delete" },
+  "side_top":      { "message": "Move to top" },
+  "side_up":       { "message": "Move up" },
+  "side_down":     { "message": "Move down" },
+  "side_bottom":   { "message": "Move to bottom" },
+  "side_validate": { "message": "Validate" },
+
+  "ed_standalone_title": { "message": "Filter editor" },
+  "ed_title_new":        { "message": "New rule" },
+  "ed_title_edit":       { "message": "Edit rule" },
+  "ed_name_placeholder": { "message": "For example: Newsletter" },
+  "ed_apply_when":       { "message": "Apply this filter on:" },
+  "ed_apply_when_value": { "message": "Delivery (always) — Sieve" },
+  "ed_apply_when_info":  { "message": "Sieve filters run on the server when a message is delivered. Local Thunderbird triggers do not apply." },
+  "ed_actions_label":    { "message": "Perform these actions:" },
+  "ed_show_sieve":       { "message": "Show Sieve code" },
+  "ed_confirm_discard":  { "message": "Unsaved changes will be lost. Close the editor?" },
+
+  "wiz_title":            { "message": "Create filter" },
+  "wiz_title_full":       { "message": "Server-side Sieve filters · Create filter" },
+  "wiz_section_templates":{ "message": "Templates" },
+  "wiz_section_actions":  { "message": "Actions" },
+  "wiz_section_next":     { "message": "Next steps" },
+  "wiz_section_description": { "message": "Description" },
+  "wiz_section_message":  { "message": "Message" },
+
+  "wiz_template_sender":     { "message": "By sender" },
+  "wiz_template_sender_desc":{ "message": "The most common template: the sender address is used as the From criterion. All correspondence with this contact is moved to the chosen folder." },
+  "wiz_template_domain":     { "message": "By sender domain" },
+  "wiz_template_domain_desc":{ "message": "Match by the sender's domain. Useful when you want to gather all mail from a company or service into one folder." },
+  "wiz_template_recipient":     { "message": "By recipient" },
+  "wiz_template_recipient_desc":{ "message": "Match by the To address. Handy when you receive mail at several aliases and want to sort by which one." },
+  "wiz_template_reply_to":     { "message": "By reply-to address" },
+  "wiz_template_reply_to_desc":{ "message": "Match by the Reply-To header. Useful for mailing lists that set an explicit reply address." },
+  "wiz_template_no_reply_to":  { "message": "The message has no Reply-To header." },
+  "wiz_template_subject":     { "message": "By subject" },
+  "wiz_template_subject_desc":{ "message": "The filter triggers when the subject contains the given fragment. The filter name is taken from the subject (truncated to 40 characters)." },
+  "wiz_template_list":     { "message": "Mailing list" },
+  "wiz_template_list_desc":{ "message": "Match by the List-Id header. Ideal for mailing-list traffic." },
+  "wiz_template_no_list_id":{ "message": "The message has no List-Id header." },
+  "wiz_template_tags":     { "message": "By tags" },
+  "wiz_template_tags_desc":{ "message": "This template uses Thunderbird tags. Coming in a future release." },
+  "wiz_template_tags_disabled": { "message": "The tags template will be available in a future release." },
+  "wiz_template_recipient_disabled_own": { "message": "The message is addressed only to your own addresses — “By recipient” would not be useful here." },
+
+  "wiz_act_fileinto":  { "message": "Save into folder" },
+  "wiz_act_tags":      { "message": "Tags" },
+  "wiz_act_important": { "message": "Importance" },
+  "wiz_act_star":      { "message": "Star" },
+  "wiz_act_flag":      { "message": "Flag" },
+  "wiz_post_mvp":      { "message": "soon" },
+  "wiz_no_folders":    { "message": "— no folders —" },
+
+  "wiz_next_open_editor":  { "message": "Open the rule editor" },
+  "wiz_next_open_manager": { "message": "Open the filter list" },
+
+  "wiz_msg_author":     { "message": "From:" },
+  "wiz_msg_recipients": { "message": "To:" },
+  "wiz_msg_subject":    { "message": "Subject:" },
+  "wiz_msg_date":       { "message": "Date:" },
+  "wiz_msg_size":       { "message": "Size:" },
+  "wiz_msg_error":      { "message": "Could not load the message details." },
+  "wiz_no_message":     { "message": "Open a message and try again." },
+  "wiz_no_template_selected": { "message": "Pick a template." },
+  "wiz_create":         { "message": "Create new filter…" },
+
+  "ctx_create_filter_from_message": { "message": "Create a filter from this message…" },
+
+  "mgr_lazy_auth_title": { "message": "Enter password" },
+  "mgr_lazy_auth_info":  { "message": "No password is set yet for mailbox {0} to access the filter server.",
+    "placeholders": { "0": { "content": "$1" } }
+  },
+  "mgr_no_imap_accounts": { "message": "Thunderbird has no configured IMAP/POP3 accounts. Add a mail account in Thunderbird first." },
+  "err_no_password":      { "message": "Enter a password for this mailbox." },
+  "err_password_required":{ "message": "Password is required." },
+  "options_no_accounts":  { "message": "No IMAP/POP3 accounts found in Thunderbird." },
+  "options_baseurl_global": { "message": "Middleware URL (default)" },
+  "options_password_set":   { "message": "set" },
+  "options_import_password_tb": { "message": "Import from Thunderbird" },
+  "options_import_ok":      { "message": "Password imported from Thunderbird settings." },
+  "options_import_not_found": { "message": "Password not found in Thunderbird settings (please enter it manually)." },
+  "options_import_unavailable": { "message": "Import is unavailable — this Thunderbird version does not support the plugin's Experiment API." },
+  "options_migration_failed": {
+    "message": "Legacy configuration for {0} was not migrated automatically (account not found in Thunderbird). Please enter the password manually.",
+    "placeholders": { "0": { "content": "$1" } }
+  },
+  "ed_for_mailbox":         { "message": "For mailbox" },
+
+  "options_section_accounts":   { "message": "Accounts" },
+  "options_section_about":      { "message": "About" },
+  "options_section_behavior":   { "message": "Wizard and editor behaviour" },
+  "options_beh_strip_prefixes": { "message": "Strip subject prefixes when creating a “By subject” filter" },
+  "options_beh_strip_prefixes_label": { "message": "Prefixes (comma-separated):" },
+  "options_beh_hide_system_folders": { "message": "Hide system folders (Trash, Junk, Drafts, …) in folder pickers" },
+  "options_beh_exclude_own":    { "message": "Exclude my own email addresses when creating a “By recipient” filter" },
+  "options_beh_new_position_label": { "message": "Insert new rule:" },
+  "options_beh_new_position_end":   { "message": "At the end of the list (default)" },
+  "options_beh_new_position_top":   { "message": "At the top of the list" },
+  "options_status_ok":          { "message": "Ready" },
+  "options_status_need_password": { "message": "Password needed" },
+  "options_status_need_setup":  { "message": "Setup required" },
+  "options_url_auto":           { "message": "auto" },
+  "options_url_managed":        { "message": "policy" },
+  "options_url_override":       { "message": "manual" },
+  "options_url_global":         { "message": "global" },
+  "options_url_none":           { "message": "not set" },
+  "options_url_label":          { "message": "Server:" },
+  "options_pwd_label":          { "message": "Password:" },
+  "options_pwd_storage":        { "message": "saved in the plugin" },
+  "options_pwd_experiment":     { "message": "will be pulled from Thunderbird" },
+  "options_pwd_none":           { "message": "not set" },
+  "options_advanced":           { "message": "Advanced" },
+  "options_advanced_hide":      { "message": "Hide advanced" },
+  "options_import_btn":         { "message": "Import from Thunderbird" },
+  "options_test_btn":           { "message": "Test connection" },
+  "options_set_manually_btn":   { "message": "Set manually" },
+  "options_save_override":      { "message": "Save override" },
+  "options_reset_override":     { "message": "Reset override" },
+  "options_url_default_hint":   {
+    "message": "Default = https://$HOST$/sieve-proxy",
+    "placeholders": { "host": { "content": "$1" } }
+  },
+  "options_url_override_label": { "message": "Middleware URL (override)" },
+  "options_pwd_override_label": { "message": "Password (override)" },
+  "options_pwd_storage_set":    { "message": "Password saved in the plugin." },
+  "options_pwd_experiment_avail": { "message": "Password will be pulled from Thunderbird settings on first use." },
+  "options_pwd_none_long":      { "message": "No password is saved or available from Thunderbird. Enter it manually or import it." },
+  "options_url_auto_long":      {
+    "message": "Middleware URL was derived automatically from the IMAP host: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_managed_long":   {
+    "message": "Middleware URL is set by an Enterprise Policy: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_override_long":  {
+    "message": "Middleware URL: $URL$ (override)",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_global_long":    {
+    "message": "Middleware URL: $URL$ (global)",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "options_url_none_long":      { "message": "Middleware URL is not set. Configure it under “Advanced”." },
+  "options_about_storage_warning": {
+    "message": "The mailbox password is stored in plain text in storage.local. Use an app-password whenever possible."
+  },
+  "options_test_inline_ok":     { "message": "Connection successful." },
+  "options_test_inline_fail":   {
+    "message": "Error: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "mgr_run_in_folder":  { "message": "Run the selected rule on folder:" },
+  "mgr_run_pick_folder":{ "message": "Pick a folder…" },
+  "mgr_run_btn":        { "message": "Run" },
+
+  "run_title":          { "message": "Running rule…" },
+  "run_status_init":    { "message": "Preparing…" },
+  "run_status_progress":{
+    "message": "Processed $N$ of $M$, modified $K$",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "m": { "content": "$2" },
+      "k": { "content": "$3" }
+    }
+  },
+  "run_status_progress_unknown": {
+    "message": "Processed $N$, modified $K$",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "k": { "content": "$2" }
+    }
+  },
+  "run_summary": {
+    "message": "Done. Processed: $N$. Matched: $M$. Modified: $K$.",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "m": { "content": "$2" },
+      "k": { "content": "$3" }
+    }
+  },
+  "run_canceled":       { "message": "Cancelled by user." },
+  "run_done":           { "message": "Done." },
+  "run_no_match":       { "message": "No messages matched the conditions." },
+  "run_no_messages":    { "message": "The folder has no messages to process." },
+  "run_skipped_redirect": { "message": "The “redirect” action was skipped: it only runs at delivery time on the server." },
+  "run_errors":         {
+    "message": "Errors: $N$.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "run_no_selection":   { "message": "Select a rule from the list first." },
+  "run_no_folder":      { "message": "Pick a folder." },
+
+  "tb_import_local":       { "message": "Import local Thunderbird filters" },
+  "tb_import_local_short": { "message": "Import" },
+
+  "import_dialog_title":   { "message": "Import local Thunderbird filters" },
+  "import_loading":        { "message": "Loading local filters…" },
+  "import_no_experiment":  { "message": "Import is unavailable in this Thunderbird version (Experiment API missing)." },
+  "import_empty":          { "message": "No local filters were found for this account." },
+  "import_intro": {
+    "message": "Found $N$ filter(s) for account $ACCOUNT$:",
+    "placeholders": {
+      "n":       { "content": "$1" },
+      "account": { "content": "$2" }
+    }
+  },
+  "import_summary": {
+    "message": "Will import $N$ of $T$. The rest will be skipped.",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "t": { "content": "$2" }
+    }
+  },
+  "import_badge_ok":       { "message": "✓ compatible" },
+  "import_badge_partial":  { "message": "⚠ partial" },
+  "import_badge_skip":     { "message": "✕ unsupported" },
+  "import_warnings_summary":{ "message": "Show details about skipped rules…" },
+  "import_cleanup_label":  { "message": "Delete local filters after import (advanced)" },
+  "import_cleanup_hint":   { "message": "Available in a future release" },
+  "import_btn_confirm":    { "message": "Import" },
+  "import_done": {
+    "message": "Imported $N$ filter(s).",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_partial_errors": {
+    "message": "Imported $N$, with $E$ error(s).",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "e": { "content": "$2" }
+    }
+  },
+
+  "options_import_local_btn":         { "message": "Import filters from Thunderbird" },
+  "options_import_local_unavailable": { "message": "Import is unavailable in this Thunderbird version." },
+  "options_import_local_empty":       { "message": "No local filters were found for this account." },
+  "options_import_local_no_compat": {
+    "message": "Found $N$ filter(s); none are compatible — import is not possible.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "options_import_local_confirm": {
+    "message": "Import $N$ of $T$ local filter(s)?",
+    "placeholders": {
+      "n": { "content": "$1" },
+      "t": { "content": "$2" }
+    }
+  },
+  "options_import_local_done": {
+    "message": "Imported $N$ filter(s).",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+
+  "mgr_confirm_delete_many": {
+    "message": "Delete the selected rules ($N$ in total)?",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+
+  "wiz_name_sender": {
+    "message": "From $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_domain": {
+    "message": "Domain $DOMAIN$",
+    "placeholders": { "domain": { "content": "$1" } }
+  },
+  "wiz_name_recipient": {
+    "message": "To $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_reply_to": {
+    "message": "Reply-To $EMAIL$",
+    "placeholders": { "email": { "content": "$1" } }
+  },
+  "wiz_name_subject": {
+    "message": "Subject: $TEXT$",
+    "placeholders": { "text": { "content": "$1" } }
+  },
+  "wiz_name_list": {
+    "message": "Mailing list"
+  }
+}

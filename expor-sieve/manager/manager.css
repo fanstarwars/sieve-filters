@@ -1,0 +1,563 @@
+/* manager.css — Filter Manager.
+ * Vars берутся из общего :root в начале файла, переопределяются в dark-mode.
+ * Никаких CSS-фреймворков. Минимум box-shadow.
+ */
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f5f7;
+  --bg-row-hover: #f0f0f2;
+  --fg: #1d1d1f;
+  --fg-muted: #6e6e73;
+  --border: #d2d2d7;
+  --border-strong: #b8b8be;
+  --primary: #0066cc;
+  --primary-fg: #ffffff;
+  --hover: #e8e8ed;
+  --selected: #d0e2ff;
+  --selected-fg: #0a3d80;
+  --danger: #d70015;
+  --danger-fg: #ffffff;
+  --warning: #b75a00;
+  --success: #1f883d;
+  --link: #0066cc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --bg-alt: #2c2c2e;
+    --bg-row-hover: #2f2f31;
+    --fg: #f2f2f7;
+    --fg-muted: #98989d;
+    --border: #3a3a3c;
+    --border-strong: #545458;
+    --primary: #4d9cf6;
+    --primary-fg: #0a0a0a;
+    --hover: #2a2a2c;
+    --selected: #1f3b66;
+    --selected-fg: #d0e2ff;
+    --danger: #ff453a;
+    --danger-fg: #0a0a0a;
+    --warning: #ff9f0a;
+    --success: #30d158;
+    --link: #4d9cf6;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* HTML-атрибут [hidden] должен побеждать любые .className { display: flex/grid }.
+ * Без !important спецификация селектора атрибута равна классу — последнее правило выигрывает,
+ * и наши overlay (.mgr-empty с display:flex) перекрывают [hidden] из user-agent stylesheet.
+ * Это критично для view-switching через element.hidden = true. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+img, svg { display: block; }
+button { font: inherit; color: inherit; }
+
+.mgr-app {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto auto;
+  height: 100vh;
+}
+
+/* ─────── Toolbar ─────── */
+.mgr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+}
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--fg);
+}
+.tb-btn:hover:not(:disabled) { background: var(--hover); border-color: var(--border); }
+.tb-btn:active:not(:disabled) { background: var(--border); }
+.tb-btn:disabled { opacity: .4; cursor: default; }
+.tb-btn .tb-label { font-size: 11px; }
+.tb-btn .i { width: 16px; height: 16px; }
+
+.tb-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fg);
+  padding: 0;
+}
+.tb-iconbtn:hover:not(:disabled) { background: var(--hover); border-color: var(--border); }
+.tb-iconbtn:disabled { opacity: .4; cursor: default; }
+.tb-iconbtn .i { width: 16px; height: 16px; }
+
+.tb-sep {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.tb-spacer { flex: 1; }
+
+/* ─────── Account selector + search ─────── */
+.mgr-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mgr-bar-label { color: var(--fg-muted); }
+.mgr-account {
+  min-width: 220px;
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  height: 28px;
+}
+.mgr-bar-spacer { flex: 1; }
+
+.mgr-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  height: 28px;
+  width: 240px;
+}
+.mgr-search .i { width: 14px; height: 14px; color: var(--fg-muted); }
+.mgr-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  outline: none;
+  font: inherit;
+  height: 100%;
+  min-width: 0;
+}
+
+/* ─────── Hint ─────── */
+.mgr-hint {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mgr-count { margin-left: auto; }
+.mgr-selection-status {
+  margin-left: 12px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ─────── List + sidebar ─────── */
+.mgr-body {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  min-height: 0;
+}
+.mgr-list-wrap {
+  position: relative;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+
+.mgr-list {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.mgr-list thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-alt);
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg-muted);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mgr-list .col-toggle { width: 36px; text-align: center; }
+.mgr-list .col-active { width: 80px; text-align: center; }
+.mgr-list tbody tr {
+  cursor: pointer;
+  height: 32px;
+}
+.mgr-list tbody td {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mgr-list tbody td.col-toggle { text-align: center; }
+.mgr-list tbody td.col-active { text-align: center; color: var(--success); font-weight: 600; }
+.mgr-list tbody tr:hover { background: var(--bg-row-hover); }
+.mgr-list tbody tr.selected {
+  background: var(--selected);
+  color: var(--selected-fg);
+}
+.mgr-list tbody tr.selected td.col-active { color: var(--selected-fg); }
+.mgr-list tbody tr.inactive .name-cell { color: var(--fg-muted); }
+.mgr-list .name-cell { font-weight: 500; }
+
+.mgr-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+.mgr-empty h3 { margin: 0; color: var(--fg); }
+.mgr-no-config { background: var(--bg-alt); border-bottom: 1px solid var(--border); }
+.mgr-error { color: var(--danger); }
+
+/* ─────── Sidebar ─────── */
+.mgr-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 10px;
+  background: var(--bg-alt);
+}
+.side-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  height: 28px;
+  color: var(--fg);
+}
+.side-btn:hover:not(:disabled) { background: var(--hover); }
+.side-btn:disabled { opacity: .4; cursor: default; }
+.side-btn.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.side-btn.primary:hover:not(:disabled) { filter: brightness(1.05); }
+.side-btn.danger { color: var(--danger); }
+.side-btn.danger:hover:not(:disabled) { background: var(--danger); color: var(--danger-fg); border-color: var(--danger); }
+.mgr-side-gap { height: 4px; }
+
+.mgr-split {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 28px;
+  gap: 0;
+}
+.mgr-split .side-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.side-btn-arrow {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: 1px solid var(--primary);
+  border-left: 1px solid rgba(255,255,255,.3);
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  cursor: pointer;
+  height: 28px;
+}
+.side-btn-arrow:hover { filter: brightness(1.05); }
+.mgr-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  z-index: 5;
+}
+.mgr-menu li {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.mgr-menu li:hover { background: var(--hover); }
+
+/* ─────── Run-on-folder bar ─────── */
+.mgr-runbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border);
+}
+.mgr-runbar label {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.mgr-folder-pick {
+  min-width: 220px;
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  height: 28px;
+}
+.mgr-runbar button {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  padding: 4px 14px;
+  cursor: pointer;
+  height: 28px;
+}
+.mgr-runbar button:hover:not(:disabled) { filter: brightness(1.05); }
+.mgr-runbar button:disabled { opacity: .5; cursor: default; }
+
+/* ─────── Run-rule progress dialog ─────── */
+.run-dialog { width: min(440px, 90vw); }
+.run-dialog .ed-body { padding: 16px; }
+.run-dialog progress {
+  width: 100%;
+  height: 14px;
+  margin-bottom: 8px;
+}
+.run-dialog #runStatus,
+.run-dialog #runSummary {
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.run-dialog .run-warn {
+  margin: 4px 0 12px;
+  color: var(--warning);
+  font-size: 12px;
+}
+
+/* ─────── Import-from-TB dialog ─────── */
+.import-dialog .ed-body {
+  min-width: 480px;
+  max-width: 720px;
+}
+.import-intro {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.import-list {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.import-row + .import-row { border-top: 1px solid var(--border); }
+.import-row .imp-name { flex: 1; }
+.import-row .imp-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--hover);
+}
+.import-row .imp-badge.ok    { background: #d4edda; color: #155724; }
+.import-row .imp-badge.warn  { background: #fff3cd; color: #856404; }
+.import-row .imp-badge.skip  { background: #f8d7da; color: #721c24; }
+.import-summary {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted, #555);
+}
+.import-warnings {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.import-warnings ul {
+  margin: 4px 0 0 0;
+  padding-left: 18px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.import-cleanup-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--muted, #555);
+}
+.import-cleanup-hint {
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* ─────── Footer ─────── */
+.mgr-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border);
+}
+.mgr-footer a {
+  color: var(--link);
+  text-decoration: none;
+  font-size: 12px;
+}
+.mgr-footer a:hover { text-decoration: underline; }
+.mgr-footer button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  height: 28px;
+}
+.mgr-footer button:hover:not(:disabled) { background: var(--hover); }
+.mgr-footer button:disabled { opacity: .4; cursor: default; }
+
+/* ─────── Confirm dialog ─────── */
+.confirm-dialog { width: min(420px, 90vw); }
+.confirm-dialog .ed-body { padding: 16px; }
+.confirm-dialog p { margin: 0 0 16px; }
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.dialog-actions button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.dialog-actions button:hover { background: var(--hover); }
+.dialog-actions button.danger {
+  background: var(--danger);
+  color: var(--danger-fg);
+  border-color: var(--danger);
+}
+.dialog-actions button.primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+/* ──────── Lazy-auth panel ──────── */
+.mgr-lazy-auth {
+  text-align: left;
+  max-width: 520px;
+  margin: 32px auto;
+}
+.mgr-lazy-auth h3 { margin: 0 0 12px; }
+.mgr-lazy-auth .lazy-auth-info { color: var(--fg-muted); margin: 0 0 16px; }
+.mgr-lazy-auth .lazy-auth-form {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  align-items: center;
+}
+.mgr-lazy-auth .lazy-auth-form label {
+  font-weight: 500;
+  text-align: right;
+}
+.mgr-lazy-auth .lazy-auth-form input[type=password] {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.mgr-lazy-auth .lazy-auth-mailbox {
+  font-family: monospace;
+  color: var(--fg);
+}
+.mgr-lazy-auth .lazy-auth-error {
+  grid-column: 1 / -1;
+  color: var(--danger);
+  margin: 4px 0;
+}
+.mgr-lazy-auth .lazy-auth-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.mgr-lazy-auth .lazy-auth-actions button.primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: 1px solid var(--primary);
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.mgr-lazy-auth .lazy-auth-actions button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+/* ──────── Account wrap (скрывается при N=1) ──────── */
+.mgr-account-wrap[hidden] { display: none; }
+.mgr-account-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

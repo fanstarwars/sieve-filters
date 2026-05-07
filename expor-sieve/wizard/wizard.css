@@ -1,0 +1,250 @@
+/* wizard.css — Filter Wizard.
+ * Vars те же что в Manager — повторяем :root, чтобы wizard работал standalone.
+ */
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f5f7;
+  --bg-row-hover: #f0f0f2;
+  --fg: #1d1d1f;
+  --fg-muted: #6e6e73;
+  --border: #d2d2d7;
+  --border-strong: #b8b8be;
+  --primary: #0066cc;
+  --primary-fg: #ffffff;
+  --hover: #e8e8ed;
+  --selected: #d0e2ff;
+  --selected-fg: #0a3d80;
+  --danger: #d70015;
+  --warning: #b75a00;
+  --success: #1f883d;
+  --link: #0066cc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --bg-alt: #2c2c2e;
+    --bg-row-hover: #2f2f31;
+    --fg: #f2f2f7;
+    --fg-muted: #98989d;
+    --border: #3a3a3c;
+    --border-strong: #545458;
+    --primary: #4d9cf6;
+    --primary-fg: #0a0a0a;
+    --hover: #2a2a2c;
+    --selected: #1f3b66;
+    --selected-fg: #d0e2ff;
+    --danger: #ff453a;
+    --warning: #ff9f0a;
+    --success: #30d158;
+    --link: #4d9cf6;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  width: 100%;
+  min-height: 100%;
+}
+
+img { display: block; }
+
+.wiz-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 14px 18px;
+  gap: 12px;
+}
+
+.wiz-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wiz-icons .i-large { width: 28px; height: 28px; color: var(--primary); }
+.wiz-title { margin: 0; font-size: 16px; flex: 1; font-weight: 600; }
+.wiz-help {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--fg);
+}
+.wiz-help:hover { background: var(--hover); border-color: var(--border); }
+.wiz-help .i { width: 18px; height: 18px; }
+
+.wiz-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.wiz-col {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px 12px;
+  background: var(--bg-alt);
+  margin: 0;
+}
+.wiz-col legend {
+  padding: 0 6px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.wiz-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wiz-list li label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.wiz-list li label input { cursor: pointer; }
+.wiz-list li.disabled label { cursor: not-allowed; opacity: .55; }
+.wiz-soon {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--border);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+}
+.wiz-folder-sel {
+  margin-top: 4px;
+  margin-left: 24px;
+  width: calc(100% - 24px);
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+/* Описание / Письмо */
+.wiz-details {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  background: var(--bg);
+}
+.wiz-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--fg-muted);
+  font-size: 12px;
+  padding: 4px 0;
+  list-style-position: outside;
+}
+.wiz-desc-box {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--bg-alt);
+  border-radius: 4px;
+  color: var(--fg);
+  min-height: 48px;
+}
+
+.wiz-msg-box { margin-top: 6px; }
+.wiz-msg-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-alt);
+  border-radius: 4px;
+}
+.wiz-msg-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--fg-muted);
+  width: 110px;
+  vertical-align: top;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.wiz-msg-table td {
+  padding: 6px 10px;
+  word-break: break-word;
+  vertical-align: top;
+  font-size: 12px;
+}
+.wiz-msg-error {
+  color: var(--danger);
+  margin: 6px 10px 0;
+  font-size: 12px;
+}
+
+/* Footer */
+.wiz-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.wiz-bar-spacer { flex: 1; }
+.wiz-footer button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  height: 30px;
+  font: inherit;
+}
+.wiz-footer button:hover:not(:disabled) { background: var(--hover); }
+.wiz-footer button:disabled { opacity: .5; cursor: default; }
+.wiz-footer button.primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+.wiz-footer button.primary:hover:not(:disabled) { filter: brightness(1.05); }
+
+/* ──────── Lazy-auth panel (inline) ──────── */
+.wiz-lazy-auth {
+  margin: 16px 24px;
+  padding: 12px 16px;
+  border: 1px solid #d0a000;
+  border-radius: 4px;
+  background: #fff8e0;
+  color: #1d1d1f;
+  max-width: 640px;
+}
+@media (prefers-color-scheme: dark) {
+  .wiz-lazy-auth { background: #44380e; color: #f5f5f7; border-color: #b89000; }
+}
+.wiz-lazy-auth h3 { margin: 0 0 8px; font-size: 14px; }
+.wiz-lazy-auth .lazy-auth-info { margin: 0 0 12px; font-size: 13px; }
+.wiz-lazy-auth .lazy-auth-form {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 6px 10px; align-items: center;
+}
+.wiz-lazy-auth .lazy-auth-form label { text-align: right; font-weight: 500; }
+.wiz-lazy-auth .lazy-auth-form input[type=password] {
+  padding: 4px 8px;
+}
+.wiz-lazy-auth .lazy-auth-mailbox { font-family: monospace; }
+.wiz-lazy-auth .lazy-auth-error { grid-column: 1/-1; color: #d70015; margin: 4px 0; }
+.wiz-lazy-auth .lazy-auth-actions {
+  grid-column: 1/-1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;
+}

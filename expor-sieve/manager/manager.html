@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="mgr_title">Фильтры сообщений</title>
+  <link rel="stylesheet" href="manager.css">
+  <link rel="stylesheet" href="../editor/editor.css">
+</head>
+<body>
+  <div class="mgr-app">
+    <!-- ──────── Toolbar ──────── -->
+    <header class="mgr-toolbar" role="toolbar" aria-label="Действия">
+      <button type="button" class="tb-btn" id="tbNew" data-i18n-title="tb_new">
+        <img src="../icons/lucide/plus.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_new_short">Создать</span>
+      </button>
+      <button type="button" class="tb-btn" id="tbEdit" data-i18n-title="tb_edit">
+        <img src="../icons/lucide/pencil.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_edit_short">Изменить</span>
+      </button>
+      <button type="button" class="tb-btn" id="tbDuplicate" data-i18n-title="tb_duplicate">
+        <img src="../icons/lucide/copy.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_duplicate_short">Дублировать</span>
+      </button>
+      <button type="button" class="tb-btn" id="tbDelete" data-i18n-title="tb_delete">
+        <img src="../icons/lucide/trash-2.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_delete_short">Удалить</span>
+      </button>
+
+      <span class="tb-sep" aria-hidden="true"></span>
+
+      <button type="button" class="tb-btn" id="tbReload" data-i18n-title="tb_reload">
+        <img src="../icons/lucide/refresh-cw.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_reload_short">Обновить</span>
+      </button>
+
+      <span class="tb-sep" aria-hidden="true"></span>
+
+      <button type="button" class="tb-btn" id="tbWizard" data-i18n-title="tb_wizard">
+        <img src="../icons/lucide/wand-sparkles.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_wizard_short">Из письма…</span>
+      </button>
+
+      <button type="button" class="tb-btn" id="tbImportLocal" data-i18n-title="tb_import_local" hidden>
+        <img src="../icons/lucide/download.svg" class="i" alt=""><span class="tb-label" data-i18n="tb_import_local_short">Импорт</span>
+      </button>
+
+      <span class="tb-spacer"></span>
+
+      <button type="button" class="tb-iconbtn" id="tbSettings" data-i18n-title="tb_settings">
+        <img src="../icons/lucide/settings.svg" class="i" alt="">
+      </button>
+      <button type="button" class="tb-iconbtn" id="tbHelp" data-i18n-title="tb_help">
+        <img src="../icons/lucide/circle-help.svg" class="i" alt="">
+      </button>
+    </header>
+
+    <!-- ──────── Account selector + Search ──────── -->
+    <section class="mgr-bar">
+      <span id="mgrAccountWrap" class="mgr-account-wrap">
+        <label for="mgrAccount" class="mgr-bar-label" data-i18n="mgr_filters_for">Фильтры для:</label>
+        <select id="mgrAccount" class="mgr-account"></select>
+      </span>
+
+      <span class="mgr-bar-spacer"></span>
+
+      <span class="mgr-search">
+        <img src="../icons/lucide/search.svg" class="i" alt="">
+        <input type="search" id="mgrSearch"
+               data-i18n-placeholder="mgr_search_placeholder"
+               placeholder="Поиск фильтров по имени…">
+      </span>
+    </section>
+
+    <!-- ──────── Hint ──────── -->
+    <section class="mgr-hint">
+      <span data-i18n="mgr_hint_active_run">Включённые фильтры запускаются автоматически.</span>
+      <span id="mgrSelectionStatus" class="mgr-selection-status" aria-live="polite"></span>
+      <span class="mgr-count" id="mgrCount" aria-live="polite"></span>
+    </section>
+
+    <!-- ──────── List + Sidebar ──────── -->
+    <section class="mgr-body">
+      <div class="mgr-list-wrap">
+        <table class="mgr-list" role="grid" id="mgrTable">
+          <thead>
+            <tr>
+              <th class="col-toggle" scope="col" aria-label="Включён"></th>
+              <th class="col-name"   scope="col" data-i18n="mgr_col_name">Имя фильтра</th>
+              <th class="col-active" scope="col" data-i18n="mgr_col_active">Включён</th>
+            </tr>
+          </thead>
+          <tbody id="mgrBody"></tbody>
+        </table>
+
+        <div id="mgrEmpty" class="mgr-empty" hidden>
+          <p data-i18n="mgr_empty_text">У вас пока нет фильтров.</p>
+          <button type="button" class="primary" id="btnEmptyCreate" data-i18n="mgr_empty_create">Создать первое правило</button>
+        </div>
+
+        <div id="mgrLoading" class="mgr-empty" hidden>
+          <p data-i18n="mgr_loading">Загрузка…</p>
+        </div>
+
+        <div id="mgrNoConfig" class="mgr-empty mgr-no-config" hidden>
+          <h3 data-i18n="mgr_no_config_title">Конфигурация не задана</h3>
+          <p id="mgrNoConfigText"></p>
+          <button type="button" class="primary" id="btnOpenSettings" data-i18n="mgr_open_settings">Открыть настройки подключения</button>
+        </div>
+
+        <div id="mgrError" class="mgr-empty mgr-error" hidden>
+          <h3 data-i18n="mgr_error_title">Ошибка</h3>
+          <p id="mgrErrorText"></p>
+          <button type="button" id="btnRetry" data-i18n="mgr_retry">Повторить</button>
+        </div>
+
+        <div id="mgrLazyAuth" class="mgr-empty mgr-lazy-auth" hidden></div>
+      </div>
+
+      <aside class="mgr-side" aria-label="Действия с правилами">
+        <button type="button" class="side-btn primary" id="sideNew" data-i18n="side_new">Создать…</button>
+        <button type="button" class="side-btn" id="sideEdit" data-i18n="side_edit">Изменить…</button>
+        <button type="button" class="side-btn danger" id="sideDelete" data-i18n="side_delete">Удалить</button>
+
+        <div class="mgr-side-gap"></div>
+
+        <button type="button" class="side-btn" id="sideTop" data-i18n="side_top">В начало</button>
+        <button type="button" class="side-btn" id="sideUp"  data-i18n="side_up">Выше</button>
+        <button type="button" class="side-btn" id="sideDown" data-i18n="side_down">Ниже</button>
+        <button type="button" class="side-btn" id="sideBottom" data-i18n="side_bottom">В конец</button>
+
+      </aside>
+    </section>
+
+    <!-- ──────── Run-on-folder bar ──────── -->
+    <section class="mgr-runbar">
+      <label for="runFolder" data-i18n="mgr_run_in_folder">Запустить выбранное правило в папке:</label>
+      <select id="runFolder" class="mgr-folder-pick">
+        <option value="" data-i18n="mgr_run_pick_folder">Выбрать папку…</option>
+      </select>
+      <button type="button" id="runRule" class="primary" data-i18n="mgr_run_btn" disabled>Запустить</button>
+    </section>
+
+    <!-- ──────── Footer ──────── -->
+    <footer class="mgr-footer">
+      <span class="mgr-bar-spacer"></span>
+      <button type="button" id="footerClose" data-i18n="btn_close">Закрыть</button>
+    </footer>
+  </div>
+
+  <!-- ──────── Run-rule progress dialog ──────── -->
+  <dialog id="runDialog" class="ed-dialog run-dialog" aria-labelledby="runTitle">
+    <div class="ed-form">
+      <header class="ed-head">
+        <h3 id="runTitle" data-i18n="run_title">Применение правила…</h3>
+      </header>
+      <div class="ed-body">
+        <progress id="runProg" max="100" value="0"></progress>
+        <p id="runStatus" data-i18n="run_status_init">Готовлю…</p>
+        <p id="runSummary" hidden></p>
+        <p id="runWarn" class="run-warn" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" id="runCancel" data-i18n="btn_cancel">Отмена</button>
+          <button type="button" class="primary" id="runClose" hidden data-i18n="btn_close">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ──────── Editor dialog (модал внутри Manager) ──────── -->
+  <dialog id="editorDialog" class="ed-dialog" aria-labelledby="edTitle">
+    <div class="ed-form" role="document">
+      <header class="ed-head">
+        <h3 id="edTitle" data-i18n="ed_title_new">Новое правило</h3>
+      </header>
+      <div id="edBody" class="ed-body"></div>
+    </div>
+  </dialog>
+
+  <!-- ──────── Confirm-delete dialog ──────── -->
+  <dialog id="confirmDialog" class="ed-dialog confirm-dialog" aria-labelledby="confirmTitle">
+    <div class="ed-form">
+      <header class="ed-head">
+        <h3 id="confirmTitle" data-i18n="mgr_confirm_delete_title">Удалить правило?</h3>
+      </header>
+      <div class="ed-body">
+        <p id="confirmText"></p>
+        <div class="dialog-actions">
+          <button type="button" id="confirmCancel" data-i18n="btn_cancel">Отмена</button>
+          <button type="button" class="danger" id="confirmOk" data-i18n="btn_delete">Удалить</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ──────── Import-from-Thunderbird dialog ──────── -->
+  <dialog id="importDialog" class="ed-dialog import-dialog" aria-labelledby="importTitle">
+    <div class="ed-form">
+      <header class="ed-head">
+        <h3 id="importTitle" data-i18n="import_dialog_title">Импорт локальных фильтров Thunderbird</h3>
+      </header>
+      <div class="ed-body">
+        <p id="importIntro" class="import-intro"></p>
+        <div id="importList" class="import-list"></div>
+        <p id="importSummary" class="import-summary" aria-live="polite"></p>
+        <details id="importWarnings" class="import-warnings" hidden>
+          <summary data-i18n="import_warnings_summary">Подробнее о пропущенных правилах…</summary>
+          <ul id="importWarningsList"></ul>
+        </details>
+        <label class="import-cleanup-row">
+          <input type="checkbox" id="importCleanup" disabled>
+          <span data-i18n="import_cleanup_label">Удалить локальные фильтры после импорта (advanced)</span>
+          <span class="import-cleanup-hint" data-i18n="import_cleanup_hint">Доступно в следующих версиях</span>
+        </label>
+        <p id="importError" class="rf-error error-banner" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" id="importCancel" data-i18n="btn_cancel">Отмена</button>
+          <button type="button" class="primary" id="importConfirm" data-i18n="import_btn_confirm">Импортировать</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="manager.js"></script>
+</body>
+</html>

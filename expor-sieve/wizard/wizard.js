@@ -1,0 +1,401 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// wizard.js — Filter Wizard. Открывается из контекстного меню письма.
+// Принимает ?messageId=<id> в URL → запрашивает meta у background → заполняет
+// preview → собирает draft Rule по выбранному шаблону + actions.
+
+import { newRule } from '../lib/rule_model.js';
+import { t } from '../lib/rule_form.js';
+import { TEMPLATES, applyActionsToRule } from './templates.js';
+import { openEditor } from '../editor/editor.js';
+import { decodeIMAPUTF7 } from '../lib/imap_utf7.js';
+import { DEFAULTS as PREF_DEFAULTS } from '../lib/wizard_prefs.js';
+import { filterUsableFolders } from '../lib/folder_filter.js';
+
+function $(id) { return document.getElementById(id); }
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'on') {
+      for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
+    } else if (v === true) node.setAttribute(k, '');
+    else if (v === false || v == null) {/* skip */}
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (c == null || c === false) continue;
+    node.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return node;
+}
+
+function applyI18n() {
+  for (const node of document.querySelectorAll('[data-i18n]')) {
+    const v = t(node.dataset.i18n);
+    if (v) node.textContent = v;
+  }
+  for (const node of document.querySelectorAll('[data-i18n-title]')) {
+    const v = t(node.dataset.i18nTitle);
+    if (v) {
+      node.title = v;
+      if (!node.getAttribute('aria-label')) node.setAttribute('aria-label', v);
+    }
+  }
+  for (const node of document.querySelectorAll('[data-i18n-placeholder]')) {
+    const v = t(node.dataset.i18nPlaceholder);
+    if (v) node.placeholder = v;
+  }
+}
+
+async function send(cmd, payload = {}) {
+  return await browser.runtime.sendMessage({ cmd, ...payload });
+}
+function isError(r) { return r && typeof r === 'object' && r.error; }
+
+// ────────────────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────────────────
+const state = {
+  meta: null,           // {author, recipients, subject, date, size, listId, replyTo, accountId}
+  folders: [],          // полный список папок аккаунта (для action'ов)
+  visibleFolders: [],   // папки после фильтра hideSystemFolders — для picker'ов
+  accountId: null,      // accountId письма (берём из meta)
+  email: '',            // email привязанного к accountId ящика — для editor.badge
+  needsAuth: null,      // {accountId, mailbox} | null
+  selectedTemplateId: 'sender',
+  prefs: { ...PREF_DEFAULTS, subjectPrefixes: PREF_DEFAULTS.subjectPrefixes.slice() },
+  ownEmails: [],        // string[] (lowercase) — все мои identity emails
+};
+
+function templateOpts() {
+  return { prefs: state.prefs, ownEmails: state.ownEmails };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+function formatSize(bytes) {
+  if (!bytes && bytes !== 0) return '—';
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(2)} MB`;
+}
+
+function formatDate(s) {
+  if (!s) return '—';
+  try {
+    const d = s instanceof Date ? s : new Date(s);
+    if (isNaN(+d)) return String(s);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, `
+         + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  } catch { return String(s); }
+}
+
+function renderMessage(meta) {
+  $('msgAuthor').textContent     = meta?.author || '—';
+  $('msgRecipients').textContent = meta?.recipients || '—';
+  $('msgSubject').textContent    = meta?.subject || '—';
+  $('msgDate').textContent       = formatDate(meta?.date);
+  $('msgSize').textContent       = formatSize(meta?.size);
+}
+
+function showMessageError(text) {
+  $('msgError').hidden = false;
+  $('msgError').textContent = text;
+  // Очистить таблицу.
+  for (const id of ['msgAuthor','msgRecipients','msgSubject','msgDate','msgSize']) {
+    $(id).textContent = '—';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Templates rendering
+// ────────────────────────────────────────────────────────────────────────────
+function renderTemplates() {
+  const ul = $('wizTemplates');
+  ul.replaceChildren();
+  let firstEnabled = null;
+  for (const tpl of TEMPLATES) {
+    const ok = state.meta ? tpl.supports(state.meta, templateOpts()) : tpl.canApplyWithoutMessage;
+    const disabled = tpl.disabled || !ok;
+    const li = el('li', { class: disabled ? 'disabled' : '' });
+    const r = el('input', {
+      type: 'radio', name: 'wiz-tpl', value: tpl.id,
+    });
+    if (disabled) r.disabled = true;
+    if (!disabled && firstEnabled == null) firstEnabled = tpl.id;
+    r.checked = state.selectedTemplateId === tpl.id;
+    r.addEventListener('change', () => {
+      if (r.checked) { state.selectedTemplateId = tpl.id; renderDescription(); }
+    });
+    const label = el('label', {
+      title: disabled ? (tpl.disabledKey ? t(tpl.disabledKey) : '') : '',
+    }, r, ' ', t(tpl.titleKey));
+    li.append(label);
+    ul.append(li);
+  }
+  // Если выбранный шаблон оказался недоступен — выбрать первый доступный.
+  const sel = TEMPLATES.find(t => t.id === state.selectedTemplateId);
+  const selOk = sel
+    && (state.meta ? sel.supports(state.meta, templateOpts()) : sel.canApplyWithoutMessage)
+    && !sel.disabled;
+  if (!selOk && firstEnabled) {
+    state.selectedTemplateId = firstEnabled;
+    const radio = ul.querySelector(`input[value="${firstEnabled}"]`);
+    if (radio) radio.checked = true;
+  }
+  renderDescription();
+}
+
+function renderDescription() {
+  const tpl = TEMPLATES.find(t => t.id === state.selectedTemplateId);
+  if (!tpl) { $('wizDesc').textContent = ''; return; }
+  $('wizDesc').textContent = t(tpl.descKey) || '';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Folder picker
+// ────────────────────────────────────────────────────────────────────────────
+function renderFolders() {
+  // Folder picker для action 'fileinto' — показываем только пользовательские
+  // папки (Trash/Junk/Drafts/Sent/Templates/Archives скрыты, если включён
+  // hideSystemFolders). Это согласуется с UX Quick Filters: папки-«системные»
+  // адресуются специальными actions (act_trash, act_discard и т.п.).
+  state.visibleFolders = filterUsableFolders(state.folders, state.prefs);
+
+  const sel = $('actFolderSel');
+  sel.replaceChildren();
+  if (!state.visibleFolders.length) {
+    sel.append(el('option', { value: '' }, t('wiz_no_folders')));
+    sel.disabled = true;
+    return;
+  }
+  for (const f of state.visibleFolders) {
+    const raw = (f.path || f.name || '').replace(/^\//, '');
+    const label = decodeIMAPUTF7(raw) || '/';
+    sel.append(el('option', { value: f.path }, label));
+  }
+  sel.disabled = !$('actFileinto').checked;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Build draft & submit
+// ────────────────────────────────────────────────────────────────────────────
+function buildDraft() {
+  const tpl = TEMPLATES.find(x => x.id === state.selectedTemplateId);
+  if (!tpl) return null;
+  const draft = newRule();
+  draft.active = true;
+  draft.matchAll = true;
+  // Применяем шаблон → conditions + name. Передаём prefs/ownEmails.
+  tpl.apply(draft, state.meta, state.visibleFolders, templateOpts());
+  // Применяем actions. Folder picker уже показывает только visibleFolders,
+  // поэтому fallback берём из них же.
+  applyActionsToRule(draft, {
+    fileinto: $('actFileinto').checked,
+    folder: $('actFolderSel').value || (state.visibleFolders[0]?.path || ''),
+    star: $('actStar').checked,
+    flag: $('actFlag').checked,
+  }, state.visibleFolders);
+  return draft;
+}
+
+async function onCreate() {
+  const draft = buildDraft();
+  if (!draft) {
+    alert(t('wiz_no_template_selected'));
+    return;
+  }
+
+  if ($('nextOpenEditor').checked) {
+    // Открываем Editor для подтверждения; после save → опционально открыть Manager.
+    const dlg = $('editorDialog');
+    $('edTitle').textContent = t('ed_title_new');
+    await openEditor({
+      dialog: dlg,
+      host: $('edBody'),
+      draft,
+      folders: state.visibleFolders,
+      email: state.email,
+      prefs: state.prefs,
+      onCancel: () => dlg.close('cancel'),
+      onSave: async (rule) => {
+        const res = await send('saveRule', { accountId: state.accountId, rule });
+        if (isError(res)) {
+          if (res.error.kind === 'no_password') {
+            dlg.close('cancel');
+            renderLazyAuth(res.error);
+            return null;
+          }
+          return res.error.message || t('err_server');
+        }
+        dlg.close('ok');
+        if ($('nextOpenManager').checked) {
+          await send('openManager');
+        }
+        setTimeout(() => window.close(), 200);
+        return null;
+      },
+    });
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.setAttribute('open', '');
+  } else {
+    const res = await send('saveRule', { accountId: state.accountId, rule: draft });
+    if (isError(res)) {
+      if (res.error.kind === 'no_password') {
+        renderLazyAuth(res.error);
+        return;
+      }
+      alert(res.error.message || t('err_server'));
+      return;
+    }
+    if ($('nextOpenManager').checked) {
+      await send('openManager');
+    }
+    window.close();
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Lazy-auth panel — inline-form для accountId без password.
+// ────────────────────────────────────────────────────────────────────────────
+function renderLazyAuth({ accountId, mailbox }) {
+  state.needsAuth = { accountId, mailbox };
+  const host = $('wizLazyAuth');
+  host.replaceChildren();
+
+  const head = document.createElement('h3');
+  head.textContent = t('mgr_lazy_auth_title') || 'Введите пароль';
+  host.append(head);
+
+  const info = document.createElement('p');
+  info.className = 'lazy-auth-info';
+  info.textContent = (t('mgr_lazy_auth_info') || 'Для ящика {0} ещё не задан пароль.')
+    .replace('{0}', mailbox);
+  host.append(info);
+
+  const form = document.createElement('div');
+  form.className = 'lazy-auth-form';
+  const lblM = document.createElement('label'); lblM.textContent = t('options_field_mailbox');
+  const valM = document.createElement('div'); valM.className = 'lazy-auth-mailbox'; valM.textContent = mailbox;
+  const lblP = document.createElement('label'); lblP.textContent = t('options_field_password');
+  const inp = document.createElement('input');
+  inp.type = 'password'; inp.autocomplete = 'current-password';
+  inp.placeholder = t('options_field_password_placeholder');
+  const errorBox = document.createElement('p'); errorBox.className = 'lazy-auth-error'; errorBox.hidden = true;
+  const actions = document.createElement('div'); actions.className = 'lazy-auth-actions';
+  const saveBtn = document.createElement('button'); saveBtn.type = 'button'; saveBtn.className = 'primary';
+  saveBtn.textContent = t('options_save_config');
+  const cancelBtn = document.createElement('button'); cancelBtn.type = 'button';
+  cancelBtn.textContent = t('btn_cancel');
+  actions.append(saveBtn, cancelBtn);
+  form.append(lblM, valM, lblP, inp, errorBox, actions);
+  host.append(form);
+
+  saveBtn.addEventListener('click', async () => {
+    if (!inp.value) {
+      errorBox.hidden = false;
+      errorBox.textContent = t('err_password_required') || 'Пароль обязателен.';
+      return;
+    }
+    saveBtn.disabled = true; cancelBtn.disabled = true;
+    const r = await send('saveAccountConfig', { accountId, password: inp.value });
+    saveBtn.disabled = false; cancelBtn.disabled = false;
+    if (isError(r)) {
+      errorBox.hidden = false;
+      errorBox.textContent = r.error.message || t('err_server');
+      return;
+    }
+    state.needsAuth = null;
+    host.hidden = true;
+    // Retry — кликаем «Создать» ещё раз.
+    onCreate();
+  });
+  cancelBtn.addEventListener('click', () => { host.hidden = true; });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+  });
+
+  host.hidden = false;
+  setTimeout(() => inp.focus(), 50);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Bootstrap
+// ────────────────────────────────────────────────────────────────────────────
+function getQueryMessageId() {
+  try {
+    const params = new URLSearchParams(location.search);
+    const v = params.get('messageId');
+    return v ? Number(v) : null;
+  } catch { return null; }
+}
+
+async function bootstrap() {
+  applyI18n();
+  document.title = t('wiz_title');
+
+  // 0. Параллельно — wizard prefs + список собственных email'ов (для шаблона
+  //    «По адресату»). Не блокируем UI, если что-то упало — fallback дефолты.
+  try {
+    const [prefsRes, ownRes] = await Promise.all([
+      send('getWizardPrefs'),
+      send('getOwnEmails'),
+    ]);
+    if (prefsRes && !isError(prefsRes)) state.prefs = prefsRes;
+    if (Array.isArray(ownRes)) state.ownEmails = ownRes;
+  } catch {}
+
+  // 1. meta — отсюда берём accountId письма.
+  const id = getQueryMessageId();
+  if (id != null && Number.isFinite(id)) {
+    const m = await send('getMessageMeta', { id });
+    if (isError(m)) {
+      showMessageError(t('wiz_msg_error'));
+      state.meta = null;
+    } else {
+      state.meta = m;
+      state.accountId = m.accountId || null;
+      renderMessage(m);
+    }
+  } else {
+    showMessageError(t('wiz_no_message'));
+    state.meta = null;
+  }
+
+  // 2. Папки для accountId (или fallback на default).
+  const fRes = await send('listFolders', { accountId: state.accountId });
+  state.folders = isError(fRes) ? [] : (fRes || []);
+  renderFolders();
+
+  // 3. email для editor-badge.
+  if (state.accountId) {
+    try {
+      const accs = await send('listAccounts');
+      const acc = (accs || []).find(a => a.id === state.accountId);
+      if (acc) state.email = acc.email || '';
+    } catch {}
+  }
+
+  renderTemplates();
+
+  // Bind events.
+  $('btnCancel').addEventListener('click', () => window.close());
+  $('btnCreate').addEventListener('click', onCreate);
+  $('actFileinto').addEventListener('change', () => {
+    $('actFolderSel').disabled = !$('actFileinto').checked;
+  });
+  $('wizHelp').addEventListener('click', () => {
+    const url = browser.runtime.getURL('README.md');
+    browser.tabs?.create?.({ url }).catch(() => window.open(url));
+  });
+
+  // Esc — закрыть.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('editorDialog').open) window.close();
+  });
+}
+
+bootstrap().catch((e) => {
+  console.error('[wizard]', e);
+  showMessageError(String(e?.message || e));
+});
