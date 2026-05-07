@@ -339,17 +339,18 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
     if (a.type === 'fileinto' || a.type === 'copy') {
       if (folders && folders.length) {
         const sel = el('select');
-        // browser.folders.query path начинается с '/' (`/INBOX/X`); рассматриваемое
-        // a.folder может быть без слэша (импортированное / v1-mailcow). Сравниваем
-        // по нормализованной форме чтобы select-option matched.
-        const stripSlash = (s) => String(s || '').replace(/^\/+/, '');
+        // browser.folders.query path в modified UTF-7 (`/INBOX/&BC8DUARDBA-`);
+        // импортированные/legacy правила — в Unicode (`INBOX/Контур.Диадок`).
+        // Сравниваем по decoded + slash-нормализованной форме.
+        const norm = (s) => decodeIMAPUTF7(String(s || '').replace(/^\/+/, ''));
+        const target = norm(a.folder);
         let matched = null;
         for (const f of folders) {
           // value — raw IMAP-path (Sieve/Dovecot его понимают как есть);
           // текст — декодированный modified-UTF-7 для читаемости (кириллица).
           const display = decodeIMAPUTF7(f.path || f.name || '');
           const o = el('option', { value: f.path }, display || '—');
-          if (stripSlash(f.path) === stripSlash(a.folder)) {
+          if (norm(f.path) === target) {
             o.selected = true;
             matched = f.path;
           }

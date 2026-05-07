@@ -982,7 +982,10 @@ async function openImportDialog() {
   for (const tb of raw) {
     const m = mappedByName.get(tb.name);
     const compatible = !!m && !skippedNames.has(tb.name);
-    rowState.push({ tb, mapped: m, checked: compatible, compatible });
+    // По умолчанию галки сняты — destructive импорт+cleanup требует явного
+    // выбора каждого правила. Раньше default=compatible приводил к тому, что
+    // юзер по умолчанию импортировал/удалял ВСЁ, не успевая снять лишнее.
+    rowState.push({ tb, mapped: m, checked: false, compatible });
   }
 
   function renderRows() {
@@ -1098,50 +1101,36 @@ async function openImportDialog() {
         return;
       }
 
-      // 2) Импорт прошёл чисто. Если cleanup запрошен — последний confirm
-      //    (impact-irreversible action — TB UI-конвенция: подтверждать
-      //    непосредственно перед действием, а не «ну ты же поставил галку
-      //    минуту назад»).
+      // 2) Импорт прошёл чисто. Если cleanup запрошен — выполняем сразу:
+      //    юзер уже подтвердил намерение установив чекбокс «Удалить локальные»
+      //    и сняв галки с правил которые НЕ хочет трогать. window.confirm
+      //    здесь убран потому что в TB он показывает нативный «не спрашивать
+      //    больше» — после клика наш cleanup-prompt молча возвращает false и
+      //    юзеру кажется что cleanup сломан.
       if (cleanupRequested && importedTbNames.length > 0) {
-        let userOk = false;
-        try {
-          userOk = window.confirm(
-            t('import_cleanup_confirm', [String(importedTbNames.length)])
-              || `Удалить ${importedTbNames.length} локальных фильтров из Thunderbird? Действие необратимо.`,
-          );
-        } catch { userOk = false; }
-        if (userOk) {
-          const del = await send('deleteLocalFilters', {
-            accountId, names: importedTbNames,
-          });
-          if (isError(del)) {
-            // Импорт уже сохранён — НЕ откатываем. Показываем banner и
-            // закрываем диалог как partial-success: пользователь прочтёт,
-            // что cleanup упал, и сможет вручную удалить лишнее.
-            finish('ok-partial');
-            reloadAll();
-            const banner = (t('import_cleanup_failed')
-              || 'Импорт прошёл, но удаление локальных не сработало:')
-              + ' ' + errorText(del.error);
-            try { alert(banner); } catch {}
-            return;
-          }
-          finish('ok-cleaned');
+        const del = await send('deleteLocalFilters', {
+          accountId, names: importedTbNames,
+        });
+        if (isError(del)) {
+          // Импорт уже сохранён — НЕ откатываем. Показываем banner и
+          // закрываем диалог как partial-success: пользователь прочтёт,
+          // что cleanup упал, и сможет вручную удалить лишнее.
+          finish('ok-partial');
           reloadAll();
-          const deleted = (del && del.deleted) || 0;
-          // Если deleted < importedTbNames.length — часть фильтров уже была
-          // удалена кем-то ещё (race) или у них в TB-UI имя сменилось после
-          // listLocalFilters. Не показываем как ошибку — это soft-skip.
-          const msg = t('import_done_with_cleanup', [String(saved), String(deleted)])
-            || `Импортировано ${saved} фильтров. Удалено локальных: ${deleted}.`;
-          try { alert(msg); } catch {}
+          const banner = (t('import_cleanup_failed')
+            || 'Импорт прошёл, но удаление локальных не сработало:')
+            + ' ' + errorText(del.error);
+          try { alert(banner); } catch {}
           return;
         }
-        // Юзер передумал на последнем confirm → импорт остался, cleanup пропущен.
-        finish('ok');
+        finish('ok-cleaned');
         reloadAll();
-        const msg = t('import_done', [String(saved)])
-          || `Импортировано ${saved} фильтров.`;
+        const deleted = (del && del.deleted) || 0;
+        // Если deleted < importedTbNames.length — часть фильтров уже была
+        // удалена кем-то ещё (race) или у них в TB-UI имя сменилось после
+        // listLocalFilters. Не показываем как ошибку — это soft-skip.
+        const msg = t('import_done_with_cleanup', [String(saved), String(deleted)])
+          || `Импортировано ${saved} фильтров. Удалено локальных: ${deleted}.`;
         try { alert(msg); } catch {}
         return;
       }
