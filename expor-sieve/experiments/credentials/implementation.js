@@ -290,8 +290,8 @@ function filterActionName(intVal) {
 }
 
 /**
- * Resolve a TB folder URI (`imap://user%40host@host/INBOX/FESCO`) to the
- * server-relative IMAP path `INBOX/FESCO`. Walks up via folder.parent so
+ * Resolve a TB folder URI (`imap://user%40host@host/INBOX/Logistics`) to the
+ * server-relative IMAP path `INBOX/Logistics`. Walks up via folder.parent so
  * nested paths survive. On any failure returns null.
  *
  * docs: https://searchfox.org/comm-central/source/mailnews/base/public/nsIFolderLookupService.idl

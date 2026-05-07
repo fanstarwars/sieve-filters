@@ -175,7 +175,7 @@ function buildTest(cond /* , requires */) {
 // ---------------------------------------------------------------------------
 
 // Thunderbird `browser.folders.query()` возвращает path c ведущим '/'
-// (например `/INBOX/FESCO`), а Dovecot Pigeonhole отбивает такие имена:
+// (например `/INBOX/Logistics`), а Dovecot Pigeonhole отбивает такие имена:
 //   "Invalid mailbox name: Begins with hierarchy separator".
 // Нормализуем при сериализации — снимаем лидирующие '/'.
 function normalizeFolder(p) {

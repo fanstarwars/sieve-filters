@@ -174,10 +174,10 @@ describe('v1 → v2 migration', () => {
 
   it('3 v1-фильтра → один v2 + удаление трёх v1', async () => {
     __filterState = [
-      v1Filter(2, 'FESCO', '1', v1Sieve({ from: 'gmail.com', folder: 'INBOX/FESCO', order: 0 })),
-      v1Filter(5, 'eagleway-domain', '0',
-        v1Sieve({ from: '@eagleway-logistic.group', folder: 'EW', order: 1 })),
-      v1Filter(7, 'nvrsk', '0', v1Sieve({ from: '@nvrsk.ru', folder: 'NV', order: 2 })),
+      v1Filter(2, 'Logistics', '1', v1Sieve({ from: 'gmail.com', folder: 'INBOX/Logistics', order: 0 })),
+      v1Filter(5, 'partners-domain', '0',
+        v1Sieve({ from: '@partners.example', folder: 'EW', order: 1 })),
+      v1Filter(7, 'regional', '0', v1Sieve({ from: '@regional.example', folder: 'NV', order: 2 })),
     ];
 
     const ctx = await listRulesAndContext('acc-1');
@@ -193,12 +193,12 @@ describe('v1 → v2 migration', () => {
 
     // Имена сохранились.
     const names = ctx.rules.map((r) => r.name).sort();
-    expect(names).toEqual(['FESCO', 'eagleway-domain', 'nvrsk']);
+    expect(names).toEqual(['Logistics', 'partners-domain', 'regional']);
 
     // active сохранился.
-    const fesco = ctx.rules.find((r) => r.name === 'FESCO');
+    const fesco = ctx.rules.find((r) => r.name === 'Logistics');
     expect(fesco.active).toBe(true);
-    const ew = ctx.rules.find((r) => r.name === 'eagleway-domain');
+    const ew = ctx.rules.find((r) => r.name === 'partners-domain');
     expect(ew.active).toBe(false);
 
     // mailcowId на UI = rule.id (UUID), а не numeric.

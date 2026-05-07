@@ -3,7 +3,7 @@
 // Архитектура хранения:
 //
 //   browser.storage.managed (Enterprise Policy):
-//     { baseUrl: "https://mail.expor.ru/sieve-proxy" }
+//     { baseUrl: "https://mail.example.com/sieve-proxy" }
 //   - один глобальный baseUrl, идёт в baseUrl_global как дефолт.
 //
 //   browser.storage.local:
@@ -13,7 +13,7 @@
 //         "<accountId>": { baseUrl?: string, password: string }
 //       },
 //       selectedAccountId?: "<accountId>",
-//       baseUrl_global: "https://mail.expor.ru/sieve-proxy"
+//       baseUrl_global: "https://mail.example.com/sieve-proxy"
 //     }
 //
 // mailbox НИГДЕ не хранится — вычисляется через

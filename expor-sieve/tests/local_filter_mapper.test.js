@@ -43,14 +43,14 @@ function action(type, opts = {}) {
 describe('mapLocalToRule — search terms', () => {
   it('Subject Contains → field=subject op=contains', () => {
     const tb = tbFilter({
-      name: 'Силвер - в папку',
-      searchTerms: [term('Subject', 'Contains', 'silver')],
-      actions: [action('MoveToFolder', { targetFolderPath: 'INBOX/Silver' })],
+      name: 'Acme - в папку',
+      searchTerms: [term('Subject', 'Contains', 'acme')],
+      actions: [action('MoveToFolder', { targetFolderPath: 'INBOX/Acme' })],
     });
     const r = mapLocalToRule(tb);
     expect(r.skipped).toBe(false);
     expect(r.rule.conditions).toEqual([
-      { field: 'subject', op: 'contains', value: 'silver' },
+      { field: 'subject', op: 'contains', value: 'acme' },
     ]);
   });
 
@@ -220,10 +220,10 @@ describe('mapLocalToRule — actions', () => {
   it('MoveToFolder → fileinto with targetFolderPath', () => {
     const tb = tbFilter({
       searchTerms: [term('Subject', 'Contains', 'a')],
-      actions: [action('MoveToFolder', { targetFolderPath: 'INBOX/FESCO' })],
+      actions: [action('MoveToFolder', { targetFolderPath: 'INBOX/Logistics' })],
     });
     expect(mapLocalToRule(tb).rule.actions).toEqual([
-      { type: 'fileinto', folder: 'INBOX/FESCO' },
+      { type: 'fileinto', folder: 'INBOX/Logistics' },
     ]);
   });
 
@@ -231,11 +231,11 @@ describe('mapLocalToRule — actions', () => {
     const tb = tbFilter({
       searchTerms: [term('Subject', 'Contains', 'a')],
       actions: [action('MoveToFolder', {
-        targetFolderUri: 'imap://i.dymov%40x.ru@mail.x.ru/INBOX/FESCO',
+        targetFolderUri: 'imap://user%40x.ru@mail.x.ru/INBOX/Logistics',
       })],
     });
     const r = mapLocalToRule(tb);
-    expect(r.rule.actions[0]).toEqual({ type: 'fileinto', folder: 'INBOX/FESCO' });
+    expect(r.rule.actions[0]).toEqual({ type: 'fileinto', folder: 'INBOX/Logistics' });
   });
 
   it('MoveToFolder без папки — skip + warning', () => {
@@ -559,26 +559,26 @@ describe('mapLocalToRules — batch', () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 describe('mapLocalToRule — realistic Quick Filter migrations', () => {
-  it('«Силвер - в папку»: From contains @silver.ru → MoveToFolder INBOX/Silver', () => {
+  it('«Acme - в папку»: From contains @acme.example → MoveToFolder INBOX/Acme', () => {
     const tb = tbFilter({
-      name: 'Силвер - в папку',
+      name: 'Acme - в папку',
       enabled: true,
       matchAll: true,
-      searchTerms: [term('Sender', 'Contains', '@silver.ru')],
+      searchTerms: [term('Sender', 'Contains', '@acme.example')],
       actions: [action('MoveToFolder', {
-        targetFolderUri: 'imap://user%40x.ru@mail.x.ru/INBOX/Silver',
-        targetFolderPath: 'INBOX/Silver',
+        targetFolderUri: 'imap://user%40x.ru@mail.x.ru/INBOX/Acme',
+        targetFolderPath: 'INBOX/Acme',
       })],
     });
     const r = mapLocalToRule(tb);
     expect(r.skipped).toBe(false);
-    expect(r.rule.name).toBe('Силвер - в папку');
+    expect(r.rule.name).toBe('Acme - в папку');
     expect(r.rule.active).toBe(true);
     expect(r.rule.conditions).toEqual([
-      { field: 'from', op: 'contains', value: '@silver.ru' },
+      { field: 'from', op: 'contains', value: '@acme.example' },
     ]);
     expect(r.rule.actions).toEqual([
-      { type: 'fileinto', folder: 'INBOX/Silver' },
+      { type: 'fileinto', folder: 'INBOX/Acme' },
     ]);
   });
 

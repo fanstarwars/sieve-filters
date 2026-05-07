@@ -5,31 +5,31 @@
       "name": "single-from-contains-fileinto",
       "rule": {
         "id": "11111111-1111-1111-1111-111111111111",
-        "name": "От @silver.ru -> Силвер",
+        "name": "От @acme.example -> Acme",
         "active": true,
         "matchAll": true,
         "conditions": [
           {
             "field": "from",
             "op": "contains",
-            "value": "@silver.ru"
+            "value": "@acme.example"
           }
         ],
         "actions": [
           {
             "type": "fileinto",
-            "folder": "Силвер"
+            "folder": "Acme"
           }
         ],
         "stopAfter": true
       },
-      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif address :contains \"from\" \"@silver.ru\" {\n  fileinto \"Силвер\";\n  stop;\n}\n"
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif address :contains \"from\" \"@acme.example\" {\n  fileinto \"Acme\";\n  stop;\n}\n"
     },
     {
       "name": "anyof-from-list-fileinto-flag",
       "rule": {
         "id": "22222222-2222-2222-2222-222222222222",
-        "name": "Силвер anyof",
+        "name": "Acme anyof",
         "active": true,
         "matchAll": false,
         "conditions": [
@@ -41,13 +41,13 @@
           {
             "field": "from",
             "op": "contains",
-            "value": "@silver.ru"
+            "value": "@acme.example"
           }
         ],
         "actions": [
           {
             "type": "fileinto",
-            "folder": "Силвер"
+            "folder": "Acme"
           },
           {
             "type": "flag"
@@ -55,7 +55,7 @@
         ],
         "stopAfter": true
       },
-      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"imap4flags\"];\n\nif anyof (\n  address :contains \"from\" \"nicole\",\n  address :contains \"from\" \"@silver.ru\"\n) {\n  fileinto \"Силвер\";\n  addflag \"\\\\Flagged\";\n  stop;\n}\n"
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"imap4flags\"];\n\nif anyof (\n  address :contains \"from\" \"nicole\",\n  address :contains \"from\" \"@acme.example\"\n) {\n  fileinto \"Acme\";\n  addflag \"\\\\Flagged\";\n  stop;\n}\n"
     },
     {
       "name": "subject-contains-any-flag",
@@ -95,7 +95,7 @@
           {
             "field": "to",
             "op": "not_contains",
-            "value": "@expor.ru"
+            "value": "@example.com"
           }
         ],
         "actions": [
@@ -105,7 +105,7 @@
         ],
         "stopAfter": true
       },
-      "sieve": "# expor-sieve v1 managed\nif not address :contains \"to\" \"@expor.ru\" {\n  discard;\n  stop;\n}\n"
+      "sieve": "# expor-sieve v1 managed\nif not address :contains \"to\" \"@example.com\" {\n  discard;\n  stop;\n}\n"
     },
     {
       "name": "cc-is-mark-read-trash",
@@ -151,12 +151,12 @@
         "actions": [
           {
             "type": "redirect",
-            "address": "spam@expor.ru"
+            "address": "spam@example.com"
           }
         ],
         "stopAfter": false
       },
-      "sieve": "# expor-sieve v1 managed\nif header :matches \"X-Spam-Flag\" \"YES*\" {\n  redirect \"spam@expor.ru\";\n}\n"
+      "sieve": "# expor-sieve v1 managed\nif header :matches \"X-Spam-Flag\" \"YES*\" {\n  redirect \"spam@example.com\";\n}\n"
     },
     {
       "name": "size-over-mb-copy",

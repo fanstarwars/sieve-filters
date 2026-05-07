@@ -234,11 +234,11 @@ describe('rulesToCombinedSieve / combinedSieveToRules — base', () => {
     const rules = [
       {
         id: 'r-1',
-        name: 'Силвер',
+        name: 'Acme',
         active: true,
         matchAll: true,
-        conditions: [{ field: 'from', op: 'contains', value: '@silver.ru' }],
-        actions: [{ type: 'fileinto', folder: 'Силвер' }],
+        conditions: [{ field: 'from', op: 'contains', value: '@acme.example' }],
+        actions: [{ type: 'fileinto', folder: 'Acme' }],
         stopAfter: true,
         order: 0,
       },

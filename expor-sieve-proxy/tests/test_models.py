@@ -21,7 +21,7 @@ VALID_SCRIPT_V2 = "# expor-sieve v2 managed\nrequire [\"fileinto\"];\n"
 def test_add_filter_minimal_ok():
     f = AddFilterReq(
         active=1,
-        username="ivan@expor.ru",
+        username="user@example.com",
         script_desc="Спам в архив",
         script_data=VALID_SCRIPT,
     )

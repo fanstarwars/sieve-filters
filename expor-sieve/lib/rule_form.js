@@ -340,7 +340,7 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
       if (folders && folders.length) {
         const sel = el('select');
         // browser.folders.query path в modified UTF-7 (`/INBOX/&BC8DUARDBA-`);
-        // импортированные/legacy правила — в Unicode (`INBOX/Контур.Диадок`).
+        // импортированные/legacy правила — в Unicode (`INBOX/InvoiceVendor`).
         // Сравниваем по decoded + slash-нормализованной форме.
         const norm = (s) => decodeIMAPUTF7(String(s || '').replace(/^\/+/, ''));
         const target = norm(a.folder);

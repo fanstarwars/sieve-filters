@@ -98,7 +98,7 @@ const ACC1 = {
   id: 'account-1',
   name: 'Work',
   type: 'imap',
-  identities: [{ email: 'alice@expor.ru' }],
+  identities: [{ email: 'alice@example.com' }],
 };
 const ACC2 = {
   id: 'account-2',
@@ -113,7 +113,7 @@ describe('migration v1 → v2', () => {
     setupBrowser({
       local: {
         baseUrl: 'https://x/sieve-proxy',
-        mailbox: 'alice@expor.ru',
+        mailbox: 'alice@example.com',
         password: 'secret',
       },
       accounts: [ACC1, ACC2],
@@ -170,7 +170,7 @@ describe('migration v1 → v2', () => {
     setupBrowser({
       local: {
         baseUrl: 'https://x/sieve-proxy',
-        mailbox: 'alice@expor.ru',
+        mailbox: 'alice@example.com',
         password: 'secret',
       },
       accounts: [ACC1],
@@ -199,7 +199,7 @@ describe('migration v1 → v2', () => {
       managed: { baseUrl: 'https://policy.example/sieve-proxy' },
       local: {
         baseUrl: 'https://legacy/sieve-proxy',
-        mailbox: 'alice@expor.ru',
+        mailbox: 'alice@example.com',
         password: 'p',
       },
       accounts: [ACC1],
@@ -227,7 +227,7 @@ describe('loadConfigFor', () => {
     expect(c).toMatchObject({
       accountId: 'account-1',
       baseUrl: 'https://m/sieve-proxy',
-      mailbox: 'alice@expor.ru',
+      mailbox: 'alice@example.com',
       password: 'pw',
       source: 'managed',
     });
@@ -504,8 +504,8 @@ describe('tryGetPasswordFromTB (Experiment API bridge)', () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe('tryGetServerInfoFromTB (Experiment API bridge)', () => {
   const SERVER = {
-    hostname: 'mail.expor.ru', port: 993, type: 'imap',
-    username: 'alice@expor.ru', hostnameOrIp: 'mail.expor.ru',
+    hostname: 'mail.example.com', port: 993, type: 'imap',
+    username: 'alice@example.com', hostnameOrIp: 'mail.example.com',
   };
 
   it('возвращает null если Experiment API не задеплоен', async () => {
@@ -573,11 +573,11 @@ describe('tryDeriveBaseUrlFromTB', () => {
   it('строит URL вида https://${hostname}/sieve-proxy', async () => {
     setupBrowser({
       accounts: [ACC1],
-      serverInfo: { hostname: 'mail.expor.ru', port: 993, type: 'imap', username: 'a', hostnameOrIp: 'mail.expor.ru' },
+      serverInfo: { hostname: 'mail.example.com', port: 993, type: 'imap', username: 'a', hostnameOrIp: 'mail.example.com' },
     });
     const m = await loadModule();
     const url = await m.tryDeriveBaseUrlFromTB('account-1');
-    expect(url).toBe('https://mail.expor.ru/sieve-proxy');
+    expect(url).toBe('https://mail.example.com/sieve-proxy');
   });
 
   it('возвращает null если info недоступен', async () => {
@@ -598,8 +598,8 @@ describe('tryDeriveBaseUrlFromTB', () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
   const SERVER = {
-    hostname: 'mail.expor.ru', port: 993, type: 'imap',
-    username: 'alice@expor.ru', hostnameOrIp: 'mail.expor.ru',
+    hostname: 'mail.example.com', port: 993, type: 'imap',
+    username: 'alice@example.com', hostnameOrIp: 'mail.example.com',
   };
 
   it('storage пуст, managed нет, есть serverInfo → baseUrl автовыводится', async () => {
@@ -610,7 +610,7 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
-    expect(c.baseUrl).toBe('https://mail.expor.ru/sieve-proxy');
+    expect(c.baseUrl).toBe('https://mail.example.com/sieve-proxy');
     // password есть → source = 'manual'
     expect(c.source).toBe('manual');
   });
@@ -665,7 +665,7 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
-    expect(c.baseUrl).toBe('https://mail.expor.ru/sieve-proxy');
+    expect(c.baseUrl).toBe('https://mail.example.com/sieve-proxy');
     expect(c.source).toBe('partial');
   });
 
@@ -684,8 +684,8 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe('effectiveBaseUrlSource', () => {
   const SERVER = {
-    hostname: 'mail.expor.ru', port: 993, type: 'imap',
-    username: 'alice@expor.ru', hostnameOrIp: 'mail.expor.ru',
+    hostname: 'mail.example.com', port: 993, type: 'imap',
+    username: 'alice@example.com', hostnameOrIp: 'mail.example.com',
   };
 
   it('override: per-account baseUrl', async () => {
@@ -730,7 +730,7 @@ describe('effectiveBaseUrlSource', () => {
     });
     const m = await loadModule();
     const r = await m.effectiveBaseUrlSource('account-1');
-    expect(r).toEqual({ source: 'auto', baseUrl: 'https://mail.expor.ru/sieve-proxy' });
+    expect(r).toEqual({ source: 'auto', baseUrl: 'https://mail.example.com/sieve-proxy' });
   });
 
   it('none: ничего не доступно', async () => {
@@ -762,12 +762,12 @@ describe('migration не ломается с новыми полями (schema_v
     setupBrowser({
       local: {
         baseUrl: 'https://legacy/x',
-        mailbox: 'alice@expor.ru',
+        mailbox: 'alice@example.com',
         password: 'pw',
       },
       accounts: [ACC1],
-      serverInfo: { hostname: 'mail.expor.ru', port: 993, type: 'imap',
-                    username: 'a', hostnameOrIp: 'mail.expor.ru' },
+      serverInfo: { hostname: 'mail.example.com', port: 993, type: 'imap',
+                    username: 'a', hostnameOrIp: 'mail.example.com' },
     });
     const m = await loadModule();
     // Миграция перенесёт baseUrl→accounts[id].baseUrl как override.
@@ -783,12 +783,12 @@ describe('migration не ломается с новыми полями (schema_v
         accounts: { 'account-1': { password: 'p' } },
       },
       accounts: [ACC1],
-      serverInfo: { hostname: 'mail.expor.ru', port: 993, type: 'imap',
-                    username: 'a', hostnameOrIp: 'mail.expor.ru' },
+      serverInfo: { hostname: 'mail.example.com', port: 993, type: 'imap',
+                    username: 'a', hostnameOrIp: 'mail.example.com' },
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
-    expect(c.baseUrl).toBe('https://mail.expor.ru/sieve-proxy');
+    expect(c.baseUrl).toBe('https://mail.example.com/sieve-proxy');
     const src = await m.effectiveBaseUrlSource('account-1');
     expect(src.source).toBe('auto');
   });

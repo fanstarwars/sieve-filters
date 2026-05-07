@@ -13,13 +13,13 @@ from expor_sieve_proxy.ownership import (
 
 
 def test_usernames_match_case_insensitive():
-    assert usernames_match("Ivan@Expor.RU", "ivan@expor.ru")
+    assert usernames_match("User@Example.COM", "user@example.com")
     assert usernames_match("u@x.ru", "U@X.RU")
-    assert not usernames_match("ivan@expor.ru", "petr@expor.ru")
+    assert not usernames_match("user@example.com", "petr@example.com")
 
 
 def test_usernames_match_trim():
-    assert usernames_match("  ivan@expor.ru  ", "ivan@expor.ru")
+    assert usernames_match("  user@example.com  ", "user@example.com")
 
 
 def test_usernames_match_empty():
@@ -28,8 +28,8 @@ def test_usernames_match_empty():
 
 
 def test_admin_marker_detected():
-    assert has_admin_login_marker("admin*ivan@expor.ru")
-    assert not has_admin_login_marker("ivan@expor.ru")
+    assert has_admin_login_marker("admin*user@example.com")
+    assert not has_admin_login_marker("user@example.com")
     assert not has_admin_login_marker("")
 
 

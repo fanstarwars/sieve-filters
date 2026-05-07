@@ -11,7 +11,7 @@ def usernames_match(auth_user: str, body_user: str) -> bool:
     """Case-insensitive equality + базовый sanitize.
 
     Также защищаем от ALLOW_ADMIN_EMAIL_LOGIN-кейса (юзер логинится как
-    `admin*ivan@expor.ru`): любая `*` в auth_user не подменяется на body_user.
+    `admin*user@example.com`): любая `*` в auth_user не подменяется на body_user.
     Сравнение строгое.
     """
     if not auth_user or not body_user:

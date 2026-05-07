@@ -309,14 +309,14 @@ describe('matchRule — allof / anyof', () => {
 describe('findFolderByPath', () => {
   const folders = [
     { id: 'fid-inbox', name: 'INBOX', path: '/INBOX' },
-    { id: 'fid-fesco', name: 'FESCO', path: '/INBOX/FESCO' },
+    { id: 'fid-logistics', name: 'Logistics', path: '/INBOX/Logistics' },
     { id: 'fid-utf', name: 'Рассылка', path: '/INBOX/&BCAEMARBBEEESwQ7BDoEMA-' },
   ];
   it('точный path с /', () => {
-    expect(findFolderByPath(folders, '/INBOX/FESCO')?.id).toBe('fid-fesco');
+    expect(findFolderByPath(folders, '/INBOX/Logistics')?.id).toBe('fid-logistics');
   });
   it('path без leading /', () => {
-    expect(findFolderByPath(folders, 'INBOX/FESCO')?.id).toBe('fid-fesco');
+    expect(findFolderByPath(folders, 'INBOX/Logistics')?.id).toBe('fid-logistics');
   });
   it('decoded UTF-7 совпадает с raw (decoded path в правиле)', () => {
     // decodeIMAPUTF7('/INBOX/&BCAEMARBBEEESwQ7BDoEMA-') === '/INBOX/Рассылка'
