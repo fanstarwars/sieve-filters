@@ -201,10 +201,10 @@
           <summary data-i18n="import_warnings_summary">Подробнее о пропущенных правилах…</summary>
           <ul id="importWarningsList"></ul>
         </details>
-        <label class="import-cleanup-row">
-          <input type="checkbox" id="importCleanup" disabled>
-          <span data-i18n="import_cleanup_label">Удалить локальные фильтры после импорта (advanced)</span>
-          <span class="import-cleanup-hint" data-i18n="import_cleanup_hint">Доступно в следующих версиях</span>
+        <label class="import-cleanup-row" id="importCleanupRow">
+          <input type="checkbox" id="importCleanup">
+          <span data-i18n="import_cleanup_label">Удалить локальные фильтры из Thunderbird после импорта</span>
+          <span class="import-cleanup-hint" id="importCleanupHint" data-i18n="import_cleanup_hint">После успешного импорта удалит выбранные фильтры из настроек Thunderbird. Действие необратимо.</span>
         </label>
         <p id="importError" class="rf-error error-banner" hidden></p>
         <div class="dialog-actions">

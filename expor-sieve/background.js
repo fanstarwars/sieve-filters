@@ -52,6 +52,7 @@ import {
   tryGetPasswordFromTB,
   tryGetServerInfoFromTB,
   tryListLocalFiltersFromTB,
+  tryDeleteLocalFiltersFromTB,
   effectiveBaseUrlSource,
 } from './lib/config_loader.js';
 import { ProxyClient } from './lib/proxy_client.js';
@@ -796,6 +797,34 @@ browser.runtime.onMessage.addListener(async (msg) => {
           }
           return { saved, errors, ids };
         });
+      }
+
+      case 'deleteLocalFilters': {
+        // Удаляет локальные TB-фильтры по именам через Experiment-API.
+        // Вызывается ТОЛЬКО после успешного importLocalFilters и явного
+        // confirm от пользователя (см. manager.js openImportDialog).
+        // Не идёт в middleware и не трогает combined-script.
+        //
+        // Возврат:
+        //   { deleted, errors }                       — нормальный путь
+        //   { error: { kind: 'no_experiment', ... } } — Experiment-API не задеплоен
+        //   { error: { kind: 'validation' | ... } }   — пустые/битые входные
+        const accountId = await resolveAccountId(msg.accountId);
+        if (!accountId) throw makeKindError('no_config', 'no account');
+        const names = Array.isArray(msg.names)
+          ? msg.names.filter(n => typeof n === 'string' && n.length > 0)
+          : [];
+        if (names.length === 0) {
+          // No-op без обращения к API: позволяет UI безопасно «выключить»
+          // cleanup, не зная заранее, есть ли Experiment-API.
+          return { deleted: 0, errors: [] };
+        }
+        const r = await tryDeleteLocalFiltersFromTB(accountId, names);
+        if (r === null) {
+          return { error: { kind: 'no_experiment',
+                            message: 'deleteLocalFilters API not available' } };
+        }
+        return r;
       }
 
       // ── Folders ────────────────────────────────────────────────────────

@@ -876,6 +876,18 @@ function isLocalImportAvailable() {
   } catch { return false; }
 }
 
+// Cleanup-чекбокс (удаление TB-фильтров после импорта) включается только
+// если Experiment-API задеплоен И в нём есть метод deleteLocalFilters.
+// На совсем старых TB / форках без подписи второе условие может быть false
+// — тогда чекбокс остаётся disabled и tooltip объясняет почему.
+function isLocalDeleteAvailable() {
+  try {
+    return !!(typeof browser !== 'undefined'
+      && browser.exporSieveCredentials
+      && typeof browser.exporSieveCredentials.deleteLocalFilters === 'function');
+  } catch { return false; }
+}
+
 async function openImportDialog() {
   const dlg = $('importDialog');
   const list = $('importList');
@@ -886,6 +898,8 @@ async function openImportDialog() {
   const errorBox = $('importError');
   const confirmBtn = $('importConfirm');
   const cancelBtn = $('importCancel');
+  const cleanupChk = $('importCleanup');
+  const cleanupHint = $('importCleanupHint');
 
   list.replaceChildren();
   warningsList.replaceChildren();
@@ -895,6 +909,20 @@ async function openImportDialog() {
   summary.textContent = '';
   intro.textContent = t('import_loading') || 'Загружаю локальные фильтры…';
   confirmBtn.disabled = true;
+
+  // Cleanup-чекбокс: дефолт = выключен (destructive operation, opt-in only).
+  // При каждом открытии диалога СНАЧАЛА сбрасываем — иначе after-error
+  // повторное открытие сохранит чек прошлой попытки и создаст ложное
+  // ощущение «я ничего не выбирал». Активируем только если API доступен
+  // (см. isLocalDeleteAvailable) И есть совместимые правила (см. ниже).
+  if (cleanupChk) {
+    cleanupChk.checked = false;
+    cleanupChk.disabled = true;
+  }
+  if (cleanupHint) {
+    cleanupHint.textContent = t('import_cleanup_help')
+      || 'После успешного импорта удалит выбранные фильтры из настроек Thunderbird. Действие необратимо.';
+  }
 
   if (typeof dlg.showModal === 'function') dlg.showModal();
   else dlg.setAttribute('open', '');
@@ -1010,6 +1038,16 @@ async function openImportDialog() {
   renderRows();
   updateSummary();
 
+  // Enable the cleanup checkbox iff the Experiment-API method exists AND
+  // there is at least one compatible row to import. Disabled-state is the
+  // safe default — destructive op never available without an explicit
+  // green-light from both sides.
+  const hasCompatible = rowState.some(s => s.compatible);
+  const deleteApiOk = isLocalDeleteAvailable();
+  if (cleanupChk) {
+    cleanupChk.disabled = !(deleteApiOk && hasCompatible);
+  }
+
   return new Promise((resolve) => {
     let settled = false;
     const finish = (val) => {
@@ -1021,11 +1059,21 @@ async function openImportDialog() {
 
     const onCancel = () => finish('cancel');
     const onConfirm = async () => {
-      const rules = rowState.filter(s => s.checked).map(s => s.mapped);
+      const selected = rowState.filter(s => s.checked);
+      const rules = selected.map(s => s.mapped);
+      // Имена TB-фильтров для последующего cleanup. Используем оригинальное
+      // s.tb.name — оно ровно то, что вернул listLocalFilters и что Experiment
+      // увидит в filterName при reverse-iter (case-insensitive match).
+      const importedTbNames = selected.map(s => s.tb && s.tb.name).filter(Boolean);
       if (rules.length === 0) return;
+
+      const cleanupRequested = !!(cleanupChk && cleanupChk.checked && !cleanupChk.disabled);
+
       confirmBtn.disabled = true;
       cancelBtn.disabled = true;
       errorBox.hidden = true;
+
+      // 1) Импорт в combined-script.
       const r = await send('importLocalFilters', { accountId, rules });
       cancelBtn.disabled = false;
       if (isError(r)) {
@@ -1037,6 +1085,9 @@ async function openImportDialog() {
       const saved = (r && r.saved) || 0;
       const errors = (r && r.errors) || [];
       if (errors.length > 0) {
+        // Частичный успех импорта — НЕ удаляем ничего локально (cleanup
+        // должен идти ТОЛЬКО после полностью зелёного импорта, иначе
+        // юзер потеряет TB-копию фильтра, который не доехал на сервер).
         errorBox.hidden = false;
         const lines = errors.slice(0, 5).map(e => `• ${e.name}: ${e.msg}`);
         if (errors.length > 5) lines.push(`… и ещё ${errors.length - 5}`);
@@ -1046,12 +1097,60 @@ async function openImportDialog() {
         confirmBtn.disabled = false;
         return;
       }
+
+      // 2) Импорт прошёл чисто. Если cleanup запрошен — последний confirm
+      //    (impact-irreversible action — TB UI-конвенция: подтверждать
+      //    непосредственно перед действием, а не «ну ты же поставил галку
+      //    минуту назад»).
+      if (cleanupRequested && importedTbNames.length > 0) {
+        let userOk = false;
+        try {
+          userOk = window.confirm(
+            t('import_cleanup_confirm', [String(importedTbNames.length)])
+              || `Удалить ${importedTbNames.length} локальных фильтров из Thunderbird? Действие необратимо.`,
+          );
+        } catch { userOk = false; }
+        if (userOk) {
+          const del = await send('deleteLocalFilters', {
+            accountId, names: importedTbNames,
+          });
+          if (isError(del)) {
+            // Импорт уже сохранён — НЕ откатываем. Показываем banner и
+            // закрываем диалог как partial-success: пользователь прочтёт,
+            // что cleanup упал, и сможет вручную удалить лишнее.
+            finish('ok-partial');
+            reloadAll();
+            const banner = (t('import_cleanup_failed')
+              || 'Импорт прошёл, но удаление локальных не сработало:')
+              + ' ' + errorText(del.error);
+            try { alert(banner); } catch {}
+            return;
+          }
+          finish('ok-cleaned');
+          reloadAll();
+          const deleted = (del && del.deleted) || 0;
+          // Если deleted < importedTbNames.length — часть фильтров уже была
+          // удалена кем-то ещё (race) или у них в TB-UI имя сменилось после
+          // listLocalFilters. Не показываем как ошибку — это soft-skip.
+          const msg = t('import_done_with_cleanup', [String(saved), String(deleted)])
+            || `Импортировано ${saved} фильтров. Удалено локальных: ${deleted}.`;
+          try { alert(msg); } catch {}
+          return;
+        }
+        // Юзер передумал на последнем confirm → импорт остался, cleanup пропущен.
+        finish('ok');
+        reloadAll();
+        const msg = t('import_done', [String(saved)])
+          || `Импортировано ${saved} фильтров.`;
+        try { alert(msg); } catch {}
+        return;
+      }
+
+      // 3) Cleanup не запрошен — обычный happy-path.
       finish('ok');
-      // После закрытия — подтянуть актуальный список правил.
       reloadAll();
       const msg = t('import_done', [String(saved)])
         || `Импортировано ${saved} фильтров.`;
-      // Toast minimal: alert (без отдельного toast-API в проекте).
       try { alert(msg); } catch {}
     };
 

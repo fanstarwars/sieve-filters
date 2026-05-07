@@ -428,12 +428,25 @@
   "import_badge_partial":  { "message": "⚠ частично" },
   "import_badge_skip":     { "message": "✕ несовместим" },
   "import_warnings_summary":{ "message": "Подробнее о пропущенных правилах…" },
-  "import_cleanup_label":  { "message": "Удалить локальные фильтры после импорта (advanced)" },
-  "import_cleanup_hint":   { "message": "Доступно в следующих версиях" },
+  "import_cleanup_label":  { "message": "Удалить локальные фильтры из Thunderbird после импорта" },
+  "import_cleanup_hint":   { "message": "После успешного импорта удалит выбранные фильтры из настроек Thunderbird. Действие необратимо." },
+  "import_cleanup_help":   { "message": "После успешного импорта удалит выбранные фильтры из настроек Thunderbird. Действие необратимо." },
+  "import_cleanup_confirm": {
+    "message": "Удалить $N$ локальных фильтров из Thunderbird? Действие необратимо.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_cleanup_failed": { "message": "Импорт прошёл, но удаление локальных не сработало:" },
   "import_btn_confirm":    { "message": "Импортировать" },
   "import_done": {
     "message": "Импортировано $N$ фильтров.",
     "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_done_with_cleanup": {
+    "message": "Импортировано $IMPORTED$ фильтров. Удалено локальных: $DELETED$.",
+    "placeholders": {
+      "imported": { "content": "$1" },
+      "deleted":  { "content": "$2" }
+    }
   },
   "import_partial_errors": {
     "message": "Импортировано $N$, с ошибками $E$.",

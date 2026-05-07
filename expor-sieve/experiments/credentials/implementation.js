@@ -644,6 +644,131 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
             return [];
           }
         },
+
+        /**
+         * Delete local TB filters by name. Triggered by the Manager
+         * «Удалить локальные после импорта» checkbox AFTER a successful
+         * combined-script import — UI confirms once more (window.confirm)
+         * before invoking us, so by the time we get here the user has
+         * already accepted the destructive action.
+         *
+         * Algorithm:
+         *   1. Resolve nsIMsgIncomingServer (same as listLocalFilters).
+         *   2. Open the editable nsIMsgFilterList via server.getFilterList(null).
+         *   3. Walk filters in REVERSE order; removeFilterAt(i) shifts every
+         *      filter after i down by one — iterating backwards keeps indices
+         *      stable for the unvisited prefix.
+         *   4. Match by case-insensitive filterName against the user's set.
+         *   5. After all removals call list.saveToDefaultFile() — without it
+         *      msgFilterRules.dat stays untouched and the deletion vanishes
+         *      on next TB restart.
+         *   6. Per-filter exceptions are collected into the errors array but
+         *      never re-thrown. A top-level resolve / save error yields
+         *      { deleted:0, errors:[{name:null, msg:'…'}] } so the caller
+         *      can keep the (already-successful) import flow green.
+         *
+         * docs: https://searchfox.org/comm-central/source/mailnews/search/public/nsIMsgFilterList.idl
+         *   readonly attribute unsigned long filterCount;
+         *   nsIMsgFilter getFilterAt(in unsigned long filterIndex);
+         *   void removeFilterAt(in unsigned long filterIndex);
+         *   void saveToDefaultFile();
+         * docs: https://searchfox.org/comm-central/source/mailnews/base/public/nsIMsgIncomingServer.idl
+         *   nsIMsgFilterList getFilterList(in nsIMsgWindow msgWindow);
+         */
+        async deleteLocalFilters(accountId, names) {
+          if (typeof accountId !== "string" || !accountId) {
+            return { deleted: 0, errors: [{ name: null, msg: "accountId required" }] };
+          }
+          const wanted = Array.isArray(names) ? names : [];
+          if (wanted.length === 0) return { deleted: 0, errors: [] };
+
+          const server = resolveIncomingServer(accountId);
+          if (!server) {
+            return { deleted: 0, errors: [{ name: null, msg: "incomingServer not found" }] };
+          }
+
+          // Restrict to imap/pop3 — same contract as listLocalFilters.
+          let serverType = "";
+          try {
+            serverType = (server.type || "").toLowerCase();
+          } catch (_e) { /* ignore */ }
+          if (serverType !== "imap" && serverType !== "pop3") {
+            return { deleted: 0, errors: [{ name: null, msg: "unsupported server type" }] };
+          }
+
+          let list = null;
+          try {
+            // docs: getFilterList(null) — passing null nsIMsgWindow is
+            //   valid for non-interactive code paths (no UI dialogs).
+            list = server.getFilterList(null);
+          } catch (e) {
+            logWarn("server.getFilterList threw:", e?.message || e);
+            return { deleted: 0, errors: [{ name: null, msg: e?.message || String(e) }] };
+          }
+          if (!list) {
+            return { deleted: 0, errors: [{ name: null, msg: "filter list unavailable" }] };
+          }
+
+          // O(1) lowercase lookup — TB UI is case-sensitive on save but
+          // users frequently rename casing without realising it; matching
+          // case-insensitively is the safer "do what I mean" default.
+          const target = new Set();
+          for (const n of wanted) {
+            if (typeof n === "string" && n.length > 0) {
+              target.add(n.toLowerCase());
+            }
+          }
+          if (target.size === 0) return { deleted: 0, errors: [] };
+
+          let count = 0;
+          try { count = Number(list.filterCount) || 0; } catch (_e) { count = 0; }
+
+          let deleted = 0;
+          const errors = [];
+
+          // Reverse iteration: removeFilterAt(i) shifts indices > i down by
+          // one; walking backwards keeps the unvisited prefix [0..i-1] valid.
+          for (let i = count - 1; i >= 0; i--) {
+            let f = null;
+            let fname = "";
+            try {
+              f = list.getFilterAt(i);
+            } catch (e) {
+              errors.push({ name: null, msg: `getFilterAt(${i}): ${e?.message || e}` });
+              continue;
+            }
+            if (!f) continue;
+            try {
+              fname = String(f.filterName || "");
+            } catch (_e) { /* keep empty */ }
+            if (!fname) continue;
+            if (!target.has(fname.toLowerCase())) continue;
+
+            try {
+              // docs: removeFilterAt is idempotent w.r.t. dirty-flag; the
+              //   actual disk-write happens only inside saveToDefaultFile.
+              list.removeFilterAt(i);
+              deleted++;
+            } catch (e) {
+              errors.push({ name: fname, msg: e?.message || String(e) });
+            }
+          }
+
+          if (deleted > 0) {
+            try {
+              // docs: saveToDefaultFile rewrites msgFilterRules.dat next to
+              //   the account's local mail directory. Without this call the
+              //   in-memory list is mutated but the on-disk file is intact,
+              //   so the next TB launch re-loads the deleted filters.
+              list.saveToDefaultFile();
+            } catch (e) {
+              logWarn("saveToDefaultFile threw:", e?.message || e);
+              errors.push({ name: null, msg: `saveToDefaultFile: ${e?.message || e}` });
+            }
+          }
+
+          return { deleted, errors };
+        },
       },
     };
   }

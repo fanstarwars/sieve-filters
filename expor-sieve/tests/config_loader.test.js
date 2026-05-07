@@ -30,7 +30,8 @@ class FakeStorage {
 let fakeLocal, fakeManaged, fakeAccountsList;
 
 function setupBrowser({ local = {}, managed = {}, accounts = [],
-                        experiment = undefined, serverInfo = undefined } = {}) {
+                        experiment = undefined, serverInfo = undefined,
+                        deleteFilters = undefined } = {}) {
   fakeLocal = new FakeStorage(local);
   fakeManaged = new FakeStorage(managed);
   fakeAccountsList = accounts;
@@ -54,7 +55,10 @@ function setupBrowser({ local = {}, managed = {}, accounts = [],
   // experiment===Function  → используется как реализация getImapPassword.
   // serverInfo: аналогично — undefined → нет namespace вообще; null → есть, но
   //             вернёт null; object → возвращается as-is; function → impl.
-  if (experiment !== undefined || serverInfo !== undefined) {
+  // deleteFilters: undefined → метода нет в namespace (старая Experiment-сборка);
+  //                Function → используется как impl deleteLocalFilters; object
+  //                → возвращается as-is.
+  if (experiment !== undefined || serverInfo !== undefined || deleteFilters !== undefined) {
     browserStub.exporSieveCredentials = {};
     if (experiment !== undefined) {
       let impl;
@@ -69,6 +73,12 @@ function setupBrowser({ local = {}, managed = {}, accounts = [],
       else if (serverInfo === null)         impl = async () => null;
       else                                  impl = async () => serverInfo;
       browserStub.exporSieveCredentials.getServerInfo = vi.fn(impl);
+    }
+    if (deleteFilters !== undefined) {
+      let impl;
+      if (typeof deleteFilters === 'function') impl = deleteFilters;
+      else                                     impl = async () => deleteFilters;
+      browserStub.exporSieveCredentials.deleteLocalFilters = vi.fn(impl);
     }
   }
   vi.stubGlobal('browser', browserStub);
@@ -781,5 +791,112 @@ describe('migration не ломается с новыми полями (schema_v
     expect(c.baseUrl).toBe('https://mail.expor.ru/sieve-proxy');
     const src = await m.effectiveBaseUrlSource('account-1');
     expect(src.source).toBe('auto');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// tryDeleteLocalFiltersFromTB — bridge для cmd:'deleteLocalFilters'.
+//
+// Контракт (см. lib/config_loader.js):
+//   - Experiment-API нет совсем → null (UI трактует как "no_experiment").
+//   - Пустой accountId → { deleted:0, errors:[{name:null,msg:'…'}] } БЕЗ вызова API.
+//   - Пустой names → API всё равно вызывается и должен вернуть { deleted:0, errors:[] }.
+//   - Experiment-метод бросил → { deleted:0, errors:[{name:null,msg}] }
+//     (бэкенд НЕ должен бросать — но если когда-нибудь начнёт, мы не падаем).
+//   - Нормальный ответ → возвращается «как есть» с приведением типов.
+// ────────────────────────────────────────────────────────────────────────────
+describe('tryDeleteLocalFiltersFromTB (Experiment API bridge)', () => {
+  it('возвращает null когда Experiment-API namespace отсутствует (старый TB)', async () => {
+    setupBrowser({ accounts: [ACC1] });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', ['Old filter']);
+    expect(r).toBeNull();
+  });
+
+  it('возвращает null когда namespace есть, но deleteLocalFilters не задеплоен', async () => {
+    // experiment-key создаёт namespace, но в нём только getImapPassword —
+    // имитирует промежуточные ESR-сборки между 0.11.0 и 0.12.0.
+    setupBrowser({ accounts: [ACC1], experiment: 'pw' });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', ['x']);
+    expect(r).toBeNull();
+  });
+
+  it('возвращает structured-error при пустом accountId без вызова API', async () => {
+    let called = 0;
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async () => { called++; return { deleted: 99, errors: [] }; },
+    });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('', ['x']);
+    expect(r).toEqual({ deleted: 0, errors: [{ name: null, msg: 'accountId required' }] });
+    expect(called).toBe(0);
+  });
+
+  it('пустой names → передаётся в API, ожидается { deleted:0, errors:[] }', async () => {
+    const calls = [];
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async (id, names) => {
+        calls.push({ id, names });
+        return { deleted: 0, errors: [] };
+      },
+    });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', []);
+    expect(r).toEqual({ deleted: 0, errors: [] });
+    expect(calls).toEqual([{ id: 'account-1', names: [] }]);
+  });
+
+  it('пробрасывает успешный ответ с deleted и errors', async () => {
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async () => ({
+        deleted: 3,
+        errors: [{ name: 'X', msg: 'busy' }],
+      }),
+    });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', ['A', 'B', 'C', 'X']);
+    expect(r.deleted).toBe(3);
+    expect(r.errors).toEqual([{ name: 'X', msg: 'busy' }]);
+  });
+
+  it('исключение в Experiment-методе → graceful fallback, не падает', async () => {
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async () => { throw new Error('XPCOM kaboom'); },
+    });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', ['x']);
+    expect(r.deleted).toBe(0);
+    expect(r.errors.length).toBe(1);
+    expect(r.errors[0].name).toBeNull();
+    expect(r.errors[0].msg).toMatch(/kaboom/);
+  });
+
+  it('кривой возврат (не-объект) → defensive { deleted:0, errors:[] }', async () => {
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async () => null,
+    });
+    const m = await loadModule();
+    const r = await m.tryDeleteLocalFiltersFromTB('account-1', ['x']);
+    expect(r).toEqual({ deleted: 0, errors: [] });
+  });
+
+  it('передаёт accountId и names в API ровно как пришли', async () => {
+    const calls = [];
+    setupBrowser({
+      accounts: [ACC1],
+      deleteFilters: async (id, names) => {
+        calls.push({ id, names });
+        return { deleted: names.length, errors: [] };
+      },
+    });
+    const m = await loadModule();
+    await m.tryDeleteLocalFiltersFromTB('account-XYZ', ['One', 'Two']);
+    expect(calls).toEqual([{ id: 'account-XYZ', names: ['One', 'Two'] }]);
   });
 });

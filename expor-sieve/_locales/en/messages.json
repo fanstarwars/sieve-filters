@@ -428,12 +428,25 @@
   "import_badge_partial":  { "message": "⚠ partial" },
   "import_badge_skip":     { "message": "✕ unsupported" },
   "import_warnings_summary":{ "message": "Show details about skipped rules…" },
-  "import_cleanup_label":  { "message": "Delete local filters after import (advanced)" },
-  "import_cleanup_hint":   { "message": "Available in a future release" },
+  "import_cleanup_label":  { "message": "Delete local Thunderbird filters after import" },
+  "import_cleanup_hint":   { "message": "After successful import, delete the selected filters from Thunderbird's settings. This cannot be undone." },
+  "import_cleanup_help":   { "message": "After successful import, delete the selected filters from Thunderbird's settings. This cannot be undone." },
+  "import_cleanup_confirm": {
+    "message": "Delete $N$ local filter(s) from Thunderbird? This cannot be undone.",
+    "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_cleanup_failed": { "message": "Import succeeded, but cleanup failed:" },
   "import_btn_confirm":    { "message": "Import" },
   "import_done": {
     "message": "Imported $N$ filter(s).",
     "placeholders": { "n": { "content": "$1" } }
+  },
+  "import_done_with_cleanup": {
+    "message": "Imported $IMPORTED$ filter(s). Deleted $DELETED$ local filter(s).",
+    "placeholders": {
+      "imported": { "content": "$1" },
+      "deleted":  { "content": "$2" }
+    }
   },
   "import_partial_errors": {
     "message": "Imported $N$, with $E$ error(s).",

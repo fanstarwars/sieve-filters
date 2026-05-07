@@ -493,6 +493,41 @@ export async function tryListLocalFiltersFromTB(accountId) {
 }
 
 /**
+ * Delete local TB filters by name через Experiment-API.
+ *
+ * Контракт:
+ *   - Возвращает `null`, если Experiment-API не задеплоен (старый TB / форк
+ *     / Betterbird без подписи) — UI трактует это как "функция недоступна".
+ *   - Возвращает `{ deleted, errors }` иначе. Если сам Experiment-метод
+ *     бросил исключение (а он не должен — он try/catch'ит всё), мы
+ *     возвращаем `{ deleted: 0, errors: [{ name: null, msg }] }`, чтобы
+ *     UI смог показать non-fatal error baseline и не уронил уже
+ *     успешный импорт.
+ *
+ * @param {string} accountId
+ * @param {string[]} names — имена TB-фильтров (case-insensitive match в impl).
+ * @returns {Promise<{deleted:number, errors:Array<{name?:string|null,msg:string}>}|null>}
+ */
+export async function tryDeleteLocalFiltersFromTB(accountId, names) {
+  if (!accountId) return { deleted: 0, errors: [{ name: null, msg: 'accountId required' }] };
+  const arr = Array.isArray(names) ? names : [];
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.deleteLocalFilters !== 'function') return null;
+    const r = await api.deleteLocalFilters(String(accountId), arr);
+    // Defensive shape-check — Experiment контракт стабилен, но если фронт
+    // когда-нибудь окажется быстрее бэка, не дать UI упасть на NPE.
+    if (!r || typeof r !== 'object') return { deleted: 0, errors: [] };
+    const deleted = Number.isFinite(r.deleted) ? Number(r.deleted) : 0;
+    const errors = Array.isArray(r.errors) ? r.errors : [];
+    return { deleted, errors };
+  } catch (e) {
+    try { console.warn('[expor-sieve] tryDeleteLocalFiltersFromTB failed:', e?.message || e); } catch (_e) {}
+    return { deleted: 0, errors: [{ name: null, msg: e?.message || String(e) }] };
+  }
+}
+
+/**
  * Сконструировать baseUrl middleware из IMAP-host'а аккаунта.
  *
  * Конвенция (см. TZ.md / архитектура): middleware деплоится на том же
