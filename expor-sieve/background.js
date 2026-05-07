@@ -220,25 +220,63 @@ async function getActiveAccountId() {
 // ────────────────────────────────────────────────────────────────────────────
 // action.onClicked → открыть Filter Manager как single-instance popup-window.
 // ────────────────────────────────────────────────────────────────────────────
+// Single-instance: в MV3 background — event-page, может suspend/restart.
+// In-memory кэш windowId переживает не всегда, поэтому при каждом запросе
+// open сначала сканим ВСЕ окна на наш manager-URL.
+const MANAGER_URL_TAIL = 'manager/manager.html';
 let managerWindowId = null;
+let openManagerInflight = null;   // защита от race при двойном клике подряд
+
+async function findManagerWindowId() {
+  // tabs.query на extension-self-URL работает БЕЗ permission "tabs":
+  // запрашивающее расширение всегда видит свои собственные страницы.
+  try {
+    const url = browser.runtime.getURL('manager/manager.html');
+    const tabs = await browser.tabs.query({ url });
+    for (const t of tabs) {
+      if (typeof t.windowId === 'number') return t.windowId;
+    }
+  } catch (e) {
+    console.warn('[expor-sieve] tabs.query failed:', e?.message || e);
+  }
+  return null;
+}
 
 async function openManager() {
-  if (managerWindowId !== null) {
+  // Если уже идёт open — все subsequent calls ждут результат того же promise.
+  if (openManagerInflight) return openManagerInflight;
+  openManagerInflight = (async () => {
     try {
-      await browser.windows.update(managerWindowId, { focused: true });
-      return;
-    } catch {
-      managerWindowId = null;
+      // 1) Soft-cache из in-memory: проверим что окно ещё живо.
+      if (managerWindowId !== null) {
+        try {
+          await browser.windows.update(managerWindowId, { focused: true });
+          return;
+        } catch { managerWindowId = null; }
+      }
+      // 2) Полный скан — переживает SW restart.
+      const found = await findManagerWindowId();
+      if (found !== null) {
+        managerWindowId = found;
+        try {
+          await browser.windows.update(found, { focused: true });
+          return;
+        } catch { managerWindowId = null; /* fall through */ }
+      }
+      // 3) Реально создать новое окно.
+      const w = await browser.windows.create({
+        url: 'manager/manager.html',
+        type: 'popup',
+        width: 900,
+        height: 600,
+        allowScriptsToClose: true,
+      });
+      managerWindowId = w.id ?? null;
+    } finally {
+      openManagerInflight = null;
     }
-  }
-  const w = await browser.windows.create({
-    url: 'manager/manager.html',
-    type: 'popup',
-    width: 900,
-    height: 600,
-    allowScriptsToClose: true,
-  });
-  managerWindowId = w.id ?? null;
+  })();
+  return openManagerInflight;
 }
 
 if (browser.action && browser.action.onClicked) {
