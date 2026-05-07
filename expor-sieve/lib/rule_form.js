@@ -339,15 +339,24 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
     if (a.type === 'fileinto' || a.type === 'copy') {
       if (folders && folders.length) {
         const sel = el('select');
+        // browser.folders.query path начинается с '/' (`/INBOX/X`); рассматриваемое
+        // a.folder может быть без слэша (импортированное / v1-mailcow). Сравниваем
+        // по нормализованной форме чтобы select-option matched.
+        const stripSlash = (s) => String(s || '').replace(/^\/+/, '');
+        let matched = null;
         for (const f of folders) {
           // value — raw IMAP-path (Sieve/Dovecot его понимают как есть);
           // текст — декодированный modified-UTF-7 для читаемости (кириллица).
           const display = decodeIMAPUTF7(f.path || f.name || '');
           const o = el('option', { value: f.path }, display || '—');
-          if (f.path === a.folder) o.selected = true;
+          if (stripSlash(f.path) === stripSlash(a.folder)) {
+            o.selected = true;
+            matched = f.path;
+          }
           sel.append(o);
         }
         sel.addEventListener('change', () => { a.folder = sel.value; });
+        if (matched) a.folder = matched;
         if (!a.folder && folders.length) a.folder = folders[0].path;
         row.append(sel);
       } else {

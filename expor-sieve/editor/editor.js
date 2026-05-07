@@ -260,13 +260,25 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
           const raw = (f.path || f.name || '').replace(/^\//, '');
           return decodeIMAPUTF7(raw) || '/';
         };
+        // browser.folders.query() возвращает path c leading slash (`/INBOX/X`),
+        // а импортированные/v1-mailcow правила хранят без (`INBOX/X`).
+        // Сравниваем по нормализованной форме — иначе selected option не
+        // находится и select показывает пусто.
+        const stripSlash = (s) => String(s || '').replace(/^\/+/, '');
         const sel = el('select');
+        let matched = null;
         for (const f of folders) {
           const o = el('option', { value: f.path }, renderLabel(f));
-          if (f.path === a.folder) o.selected = true;
+          if (stripSlash(f.path) === stripSlash(a.folder)) {
+            o.selected = true;
+            matched = f.path;
+          }
           sel.append(o);
         }
         if (!a.folder && folders[0]) a.folder = folders[0].path;
+        // Если нашли match — синхронизируем a.folder с canonical TB-path
+        // (с leading slash). Sieve-adapter всё равно strip'ает при serialise.
+        if (matched) a.folder = matched;
         sel.value = a.folder;
         sel.addEventListener('change', () => { a.folder = sel.value; markDirty(); });
         line.append(sel);
