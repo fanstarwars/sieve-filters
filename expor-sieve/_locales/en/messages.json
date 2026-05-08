@@ -176,9 +176,6 @@
   "tb_validate_short":   { "message": "Validate" },
   "tb_reload":           { "message": "Reload list" },
   "tb_reload_short":     { "message": "Reload" },
-  "tb_wizard":           { "message": "Create a filter from the open message" },
-  "tb_wizard_short":     { "message": "From message…" },
-  "tb_wizard_no_message":{ "message": "Open a message in Thunderbird and try again." },
   "tb_settings":         { "message": "Connection settings" },
   "tb_help":             { "message": "Help" },
 
@@ -255,11 +252,7 @@
   "wiz_template_recipient_disabled_own": { "message": "The message is addressed only to your own addresses — “By recipient” would not be useful here." },
 
   "wiz_act_fileinto":  { "message": "Save into folder" },
-  "wiz_act_tags":      { "message": "Tags" },
-  "wiz_act_important": { "message": "Importance" },
-  "wiz_act_star":      { "message": "Star" },
-  "wiz_act_flag":      { "message": "Flag" },
-  "wiz_post_mvp":      { "message": "soon" },
+  "wiz_act_star":      { "message": "Mark as starred" },
   "wiz_no_folders":    { "message": "— no folders —" },
 
   "wiz_next_open_editor":  { "message": "Open the rule editor" },

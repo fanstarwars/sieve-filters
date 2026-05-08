@@ -222,7 +222,6 @@ function buildDraft() {
     fileinto: $('actFileinto').checked,
     folder: $('actFolderSel').value || toCanonical(state.visibleFolders[0]?.path),
     star: $('actStar').checked,
-    flag: $('actFlag').checked,
   }, state.visibleFolders);
   return draft;
 }

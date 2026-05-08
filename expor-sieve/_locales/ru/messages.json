@@ -176,9 +176,6 @@
   "tb_validate_short":   { "message": "Проверить" },
   "tb_reload":           { "message": "Обновить список" },
   "tb_reload_short":     { "message": "Обновить" },
-  "tb_wizard":           { "message": "Создать фильтр из открытого письма" },
-  "tb_wizard_short":     { "message": "Из письма…" },
-  "tb_wizard_no_message":{ "message": "Откройте письмо в Thunderbird и попробуйте снова." },
   "tb_settings":         { "message": "Настройки подключения" },
   "tb_help":             { "message": "Справка" },
 
@@ -255,11 +252,7 @@
   "wiz_template_recipient_disabled_own": { "message": "Письмо адресовано только вашим собственным адресам — фильтр «По адресату» не имеет смысла." },
 
   "wiz_act_fileinto":  { "message": "Папка для сохранения" },
-  "wiz_act_tags":      { "message": "Метки" },
-  "wiz_act_important": { "message": "Важность" },
-  "wiz_act_star":      { "message": "Звёздочка" },
-  "wiz_act_flag":      { "message": "Флаг" },
-  "wiz_post_mvp":      { "message": "скоро" },
+  "wiz_act_star":      { "message": "Пометить звёздочкой" },
   "wiz_no_folders":    { "message": "— нет папок —" },
 
   "wiz_next_open_editor":  { "message": "Открыть редактор правил" },

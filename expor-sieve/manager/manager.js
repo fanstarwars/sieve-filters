@@ -1165,19 +1165,12 @@ function bindEvents() {
     const url = browser.runtime.getURL('README.md');
     browser.tabs.create({ url }).catch(() => window.open(url));
   });
-  $('tbWizard').addEventListener('click', async () => {
-    // docs: https://webextension-api.thunderbird.net/en/mv3/messageDisplay.html#getdisplayedmessage
-    try {
-      const m = await browser.messageDisplay.getDisplayedMessage();
-      if (m && m.id != null) {
-        await send('openWizard', { messageId: m.id });
-      } else {
-        alert(t('tb_wizard_no_message'));
-      }
-    } catch {
-      alert(t('tb_wizard_no_message'));
-    }
-  });
+  // Кнопка «Из письма…» из тулбара Manager убрана: на странице списка
+  // фильтров текущего письма по контракту нет (manager — отдельное popup-
+  // окно), и попытка `messageDisplay.getDisplayedMessage()` всегда
+  // возвращает null → юзер видел только alert «нет выделенного письма».
+  // Wizard остаётся доступен через контекстное меню «Создать фильтр из
+  // письма» прямо в окне с письмом — это единственный осмысленный entry-point.
 
   // Импорт локальных фильтров TB — кнопка показывается только если
   // Experiment-API задеплоен (на старых TB / форках без него — скрыта).

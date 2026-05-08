@@ -202,13 +202,17 @@ export const TEMPLATES = [
 ];
 
 export function applyActionsToRule(rule, opts, folders) {
-  // opts: { fileinto: bool, tags: bool, important: bool, star: bool, flag: bool }
+  // opts: { fileinto: bool, folder: string, star: bool }
+  // tags / important / отдельный «flag» убраны: tags не нужны (юзер
+  // решил не возиться), important требует editheader-расширение и UI
+  // под priority 1-5, star и flag дублировали друг друга (оба ставили
+  // \\Flagged) — оставлен только star.
   rule.actions = [];
   if (opts.fileinto) {
     const folder = toCanonical(opts.folder || folders?.[0]?.path);
     rule.actions.push({ type: 'fileinto', folder });
   }
-  if (opts.star || opts.flag) {
+  if (opts.star) {
     rule.actions.push({ type: 'flag' });
   }
   if (rule.actions.length === 0) {

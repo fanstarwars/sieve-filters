@@ -293,7 +293,81 @@ if (browser.action && browser.action.onClicked) {
 if (browser.windows && browser.windows.onRemoved) {
   browser.windows.onRemoved.addListener((id) => {
     if (id === managerWindowId) managerWindowId = null;
+    if (id === wizardWindowId)  wizardWindowId  = null;
   });
+}
+
+// Single-instance wizard. Юзер кликает «Создать фильтр из письма» из меню /
+// тулбара, и каждый клик не должен открывать новую вкладку — если окно уже
+// есть, фокусируем его и подсовываем новый messageId через query-param +
+// перезагрузку самой страницы (wizard сам читает messageId из location).
+const WIZARD_URL_TAIL = 'wizard/wizard.html';
+let wizardWindowId = null;
+let openWizardInflight = null;
+
+async function findWizardTab() {
+  try {
+    // tabs.query: extension-own URLs видим без permission "tabs"; но url-pattern
+    // должен включать query-string — `*://...wizard.html*`. Используем prefix.
+    const base = browser.runtime.getURL(WIZARD_URL_TAIL);
+    const tabs = await browser.tabs.query({ url: base + '*' });
+    for (const t of tabs) {
+      if (typeof t.windowId === 'number') return t;
+    }
+  } catch (e) {
+    console.warn('[expor-sieve] wizard tabs.query failed:', e?.message || e);
+  }
+  return null;
+}
+
+async function openWizard(messageId) {
+  if (openWizardInflight) return openWizardInflight;
+  openWizardInflight = (async () => {
+    try {
+      const newUrl = `${WIZARD_URL_TAIL}?messageId=${encodeURIComponent(messageId)}`;
+      // 1) In-memory windowId — быстрый путь. Найдём вкладку этого окна и
+      //    обновим её URL (это перезагрузит страницу — wizard.bootstrap
+      //    подхватит новый messageId).
+      if (wizardWindowId !== null) {
+        try {
+          const tab = await findWizardTab();
+          if (tab && tab.windowId === wizardWindowId) {
+            await browser.tabs.update(tab.id, { url: newUrl, active: true });
+            await browser.windows.update(wizardWindowId, { focused: true });
+            return;
+          }
+          // Окно живёт, но без wizard-вкладки — fallthrough к создать.
+          wizardWindowId = null;
+        } catch {
+          wizardWindowId = null;
+        }
+      }
+      // 2) Скан всех окон — переживает SW restart.
+      const found = await findWizardTab();
+      if (found !== null) {
+        wizardWindowId = found.windowId;
+        try {
+          await browser.tabs.update(found.id, { url: newUrl, active: true });
+          await browser.windows.update(found.windowId, { focused: true });
+          return;
+        } catch {
+          wizardWindowId = null;
+        }
+      }
+      // 3) Создаём новое окно.
+      const w = await browser.windows.create({
+        url: newUrl,
+        type: 'popup',
+        width: 820,
+        height: 620,
+        allowScriptsToClose: true,
+      });
+      wizardWindowId = w.id ?? null;
+    } finally {
+      openWizardInflight = null;
+    }
+  })();
+  return openWizardInflight;
 }
 
 // При удалении IMAP-аккаунта в TB — чистим конфиг.
@@ -332,13 +406,7 @@ if (browser.menus && browser.menus.onClicked) {
     if (!messages || !messages.length) return;
     const id = messages[0].id;
     try {
-      await browser.windows.create({
-        url: `wizard/wizard.html?messageId=${encodeURIComponent(id)}`,
-        type: 'popup',
-        width: 820,
-        height: 620,
-        allowScriptsToClose: true,
-      });
+      await openWizard(id);
     } catch (e) {
       console.error('[expor-sieve] open wizard:', e);
     }
@@ -1076,13 +1144,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       case 'openWizard': {
         const id = msg.messageId;
         if (!id) throw makeKindError('validation', 'messageId required');
-        await browser.windows.create({
-          url: `wizard/wizard.html?messageId=${encodeURIComponent(id)}`,
-          type: 'popup',
-          width: 820,
-          height: 620,
-          allowScriptsToClose: true,
-        });
+        await openWizard(id);
         return { ok: true };
       }
 
