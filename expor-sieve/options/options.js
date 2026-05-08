@@ -696,16 +696,27 @@ function renderFolderList(host, accountId, folders, isServerToggleOn) {
     return;
   }
 
-  // Кнопки массовых операций.
+  // Хедер: счётчик отмеченных + bulk-кнопки + bulk-toast рядом.
+  const counter = el('span', { class: 'notify-counter' });
+  const updateCounter = () => {
+    const n = ul.querySelectorAll('input[type=checkbox]:checked').length;
+    const tmpl = i18n('options_notify_counter', 'Отмечено {0} из {1}');
+    counter.textContent = tmpl.replace('{0}', String(n)).replace('{1}', String(folders.length));
+  };
+
   const tools = el('div', { class: 'notify-tools' });
-  const btnAll = el('button', { type: 'button' },
+  const btnAll = el('button', { type: 'button', class: 'notify-bulk-btn' },
     i18n('options_notify_btn_all', 'Все'));
-  const btnInboxJunk = el('button', { type: 'button' },
+  const btnInboxJunk = el('button', { type: 'button', class: 'notify-bulk-btn' },
     i18n('options_notify_btn_inbox_junk', 'Только Inbox + Junk'));
-  const btnNone = el('button', { type: 'button' },
+  const btnNone = el('button', { type: 'button', class: 'notify-bulk-btn' },
     i18n('options_notify_btn_none', 'Сбросить'));
+  const bulkToast = el('span', { class: 'notify-bulk-toast' });
+
+  const header = el('div', { class: 'notify-header' });
+  header.append(counter, tools, bulkToast);
   tools.append(btnAll, btnInboxJunk, btnNone);
-  host.append(tools);
+  host.append(header);
 
   if (isServerToggleOn()) {
     host.append(el('p', { class: 'section-hint notify-overridden' },
@@ -713,10 +724,11 @@ function renderFolderList(host, accountId, folders, isServerToggleOn) {
         'Включён общий тоггл выше — TB опрашивает все подпапки. Индивидуальные галки сейчас не влияют.')));
   }
 
-  // Список папок.
+  // Список папок. Каждая строка — <label>, чтобы клик в любое место строки
+  // (имя, бейджи) переключал чекбокс, как в нативных диалогах.
   const ul = el('ul', { class: 'notify-folders' });
   for (const f of folders) {
-    const li = el('li', { class: 'notify-folder-row' });
+    const row = el('label', { class: 'notify-folder-row', tabindex: '0' });
     const cb = el('input', { type: 'checkbox', 'data-folder-path': f.path });
     cb.checked = !!f.checkNew;
     cb.disabled = isServerToggleOn();
@@ -738,53 +750,119 @@ function renderFolderList(host, accountId, folders, isServerToggleOn) {
     }
     const status = el('span', { class: 'notify-status' });
 
-    cb.addEventListener('change', async () => {
-      const wanted = cb.checked;
-      cb.disabled = true;
-      status.textContent = '…';
-      try {
-        const r = await send({
-          cmd: 'setFolderCheckNew',
-          accountId,
-          path: f.path,
-          enabled: wanted,
-        });
-        if (r && r.error) {
-          cb.checked = !wanted;
-          status.classList.add('err');
-          status.textContent = errorText(r.error);
-          return;
+    // Один общий handler — используется и при ручном клике, и при bulk.
+    // bulkInProgress=true выключает индивидуальные toast'ы и анимацию,
+    // чтобы после массовой операции не было каскада «✓ ✓ ✓ …».
+    let pending = null;
+    const persist = async (wanted, { bulkInProgress = false } = {}) => {
+      if (pending) await pending;
+      pending = (async () => {
+        if (!bulkInProgress) status.textContent = '…';
+        try {
+          const r = await send({
+            cmd: 'setFolderCheckNew',
+            accountId,
+            path: f.path,
+            enabled: wanted,
+          });
+          if (r && r.error) {
+            cb.checked = !wanted;
+            if (!bulkInProgress) {
+              status.classList.add('err');
+              status.textContent = errorText(r.error);
+            }
+            return { ok: false };
+          }
+          if (r && typeof r.enabled === 'boolean') cb.checked = r.enabled;
+          if (!bulkInProgress) {
+            status.classList.remove('err');
+            status.classList.add('saved');
+            status.textContent = '✓';
+            setTimeout(() => {
+              status.classList.remove('saved');
+              status.textContent = '';
+            }, 1200);
+          }
+          return { ok: true };
+        } finally {
+          updateCounter();
         }
-        if (r && typeof r.enabled === 'boolean') cb.checked = r.enabled;
-        status.classList.remove('err');
-        status.textContent = i18n('options_notify_saved', '✓');
-        setTimeout(() => { status.textContent = ''; }, 1500);
-      } finally {
-        cb.disabled = isServerToggleOn();
+      })();
+      const r = await pending; pending = null; return r;
+    };
+
+    cb.addEventListener('change', () => {
+      // Юзер сам кликнул чекбокс — нормальный путь с toast.
+      persist(cb.checked);
+    });
+    // Enter / Space на label для keyboard-friendly режима.
+    row.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (cb.disabled) return;
+        cb.checked = !cb.checked;
+        persist(cb.checked);
       }
     });
 
-    li.append(cb, name, badges, status);
-    ul.append(li);
+    row.append(cb, name, badges, status);
+    row._persist = persist;
+    row._folder = f;
+    ul.append(row);
   }
   host.append(ul);
+  updateCounter();
 
-  const bulkApply = async (predicate) => {
+  // Bulk-операции — последовательно, чтобы Pigeonhole / Services.prefs не
+  // получили N запросов одновременно. Кнопки disabled на время работы,
+  // показываем краткий toast «Отмечено N» / «Сброшено» рядом.
+  const showBulkToast = (changed, mode) => {
+    bulkToast.classList.remove('saved'); // re-trigger animation
+    void bulkToast.offsetWidth;
+    let msg;
+    if (changed === 0) {
+      msg = i18n('options_notify_bulk_nochange', 'Уже применено');
+    } else if (mode === 'clear') {
+      msg = (i18n('options_notify_bulk_cleared', 'Сброшено: {0}') || 'Сброшено: {0}')
+        .replace('{0}', String(changed));
+    } else {
+      msg = (i18n('options_notify_bulk_set', 'Отмечено: {0}') || 'Отмечено: {0}')
+        .replace('{0}', String(changed));
+    }
+    bulkToast.textContent = msg;
+    bulkToast.classList.add('saved');
+    setTimeout(() => {
+      bulkToast.classList.remove('saved');
+      bulkToast.textContent = '';
+    }, 2200);
+  };
+
+  const bulkApply = async (predicate, mode) => {
     if (isServerToggleOn()) return;
-    for (const li of ul.children) {
-      const cb = li.querySelector('input[type=checkbox]');
-      const path = cb.getAttribute('data-folder-path');
-      const folder = folders.find(x => x.path === path);
-      const want = predicate(folder);
-      if (cb.checked === want) continue;
-      cb.checked = want;
-      cb.dispatchEvent(new Event('change'));
+    btnAll.disabled = btnInboxJunk.disabled = btnNone.disabled = true;
+    bulkToast.textContent = i18n('options_notify_bulk_applying', 'Применяю…');
+    bulkToast.classList.add('busy');
+    try {
+      let changed = 0;
+      for (const row of ul.children) {
+        const cb = row.querySelector('input[type=checkbox]');
+        const folder = row._folder;
+        const want = predicate(folder);
+        if (cb.checked === want) continue;
+        cb.checked = want;
+        const res = await row._persist(want, { bulkInProgress: true });
+        if (res && res.ok) changed++;
+      }
+      bulkToast.classList.remove('busy');
+      showBulkToast(changed, mode);
+    } finally {
+      btnAll.disabled = btnInboxJunk.disabled = btnNone.disabled = isServerToggleOn();
     }
   };
-  btnAll.addEventListener('click', () => bulkApply(() => true));
+  btnAll.addEventListener('click', () => bulkApply(() => true, 'set'));
   btnInboxJunk.addEventListener('click', () => bulkApply(f =>
-    f.isInbox || (f.specialUse || []).includes('junk')));
-  btnNone.addEventListener('click', () => bulkApply(() => false));
+    f.isInbox || (f.specialUse || []).includes('junk'), 'set'));
+  btnNone.addEventListener('click', () => bulkApply(() => false, 'clear'));
 }
 
 async function init() {

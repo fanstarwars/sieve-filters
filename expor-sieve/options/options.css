@@ -346,7 +346,7 @@ input:disabled { opacity: .7; }
 .about-list a { color: var(--primary); text-decoration: none; }
 .about-list a:hover { text-decoration: underline; }
 
-/* ─────── Notify section: per-server check_all_folders_for_new ─────── */
+/* ─────── Notify section: shared bits ─────── */
 #section-notify .section-help {
   margin: 0 0 12px 0;
   color: var(--fg-muted);
@@ -358,67 +358,183 @@ input:disabled { opacity: .7; }
   font-size: 12px;
   font-style: italic;
 }
-.notify-list { display: flex; flex-direction: column; gap: 6px; }
+/* Используем нативный accent-color, чтоб чекбоксы выглядели по-системному */
+#section-notify input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px; height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.notify-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* ─────── Per-account header row ─────── */
 .notify-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 .notify-row:hover { background: var(--bg-hover, rgba(0,0,0,0.04)); }
-.notify-row .notify-label { flex: 1; }
-.notify-row .notify-status { color: var(--fg-muted); font-size: 12px; min-width: 0; }
+.notify-row:has(input:checked) { border-color: var(--primary, #2c5aa0); }
+.notify-row .notify-label { flex: 1; font-weight: 500; }
+.notify-row .notify-status {
+  color: var(--fg-muted); font-size: 12px;
+  min-width: 0;
+  transition: opacity 0.18s ease;
+}
 .notify-row .notify-status.err { color: #c00; }
+.notify-row .notify-status.saved { color: #2a8a2a; opacity: 1; }
 
-/* ─────── Notify section: per-folder details ─────── */
-.notify-block { display: flex; flex-direction: column; gap: 4px; }
-.notify-block + .notify-block { margin-top: 8px; }
-.notify-details { margin-left: 28px; }
+/* ─────── Per-account block (header + details) ─────── */
+.notify-block {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.notify-block + .notify-block { margin-top: 4px; }
+
+/* ─────── Expandable «Configure individual folders» ─────── */
+.notify-details { margin: 4px 0 0 0; }
 .notify-details > summary {
+  list-style: none;
   cursor: pointer;
   color: var(--primary);
   font-size: 13px;
-  padding: 2px 0;
+  padding: 4px 8px 4px 28px;
   user-select: none;
+  position: relative;
+  border-radius: 4px;
+  transition: background 0.12s ease;
 }
-.notify-inner { padding: 8px 0 8px 12px; border-left: 2px solid var(--border); margin-left: 4px; }
-.notify-tools { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-.notify-tools button {
-  padding: 4px 10px;
+.notify-details > summary::-webkit-details-marker { display: none; }
+.notify-details > summary::before {
+  content: '▸';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.15s ease;
+  display: inline-block;
+  font-size: 11px;
+}
+.notify-details[open] > summary::before { transform: translateY(-50%) rotate(90deg); }
+.notify-details > summary:hover { background: var(--bg-hover, rgba(0,0,0,0.04)); }
+
+.notify-inner {
+  padding: 10px 12px 12px 12px;
+  margin: 4px 0 0 14px;
+  border-left: 2px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  background: var(--bg-subtle, rgba(0,0,0,0.02));
+}
+
+/* ─────── Header above folder list (counter + bulk + toast) ─────── */
+.notify-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.notify-counter {
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.notify-tools { display: flex; gap: 4px; flex-wrap: wrap; }
+.notify-bulk-btn {
+  padding: 4px 12px;
   font-size: 12px;
   border: 1px solid var(--border);
-  background: transparent;
-  border-radius: 3px;
+  background: var(--bg, #fff);
+  border-radius: 4px;
   cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease;
 }
-.notify-tools button:hover { background: var(--bg-hover, rgba(0,0,0,0.04)); }
+.notify-bulk-btn:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(0,0,0,0.05));
+  border-color: var(--primary, #2c5aa0);
+}
+.notify-bulk-btn:active:not(:disabled) { transform: scale(0.97); }
+.notify-bulk-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.notify-bulk-toast {
+  font-size: 12px;
+  margin-left: auto;
+  min-height: 1em;
+  color: #2a8a2a;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.notify-bulk-toast.saved { opacity: 1; }
+.notify-bulk-toast.busy { color: var(--fg-muted); opacity: 1; font-style: italic; }
+
+/* ─────── Override warning ─────── */
 .notify-overridden {
-  margin: 4px 0 8px 0;
-  padding: 6px 8px;
+  margin: 0 0 10px 0;
+  padding: 8px 10px;
   background: rgba(255, 200, 0, 0.08);
   border-left: 3px solid #d4a017;
+  border-radius: 0 4px 4px 0;
   font-size: 12px;
 }
+
+/* ─────── Folder rows ─────── */
 .notify-folders { list-style: none; padding: 0; margin: 0; }
 .notify-folder-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 13px;
+  transition: background 0.1s ease;
+}
+.notify-folder-row:hover { background: var(--bg-hover, rgba(0,0,0,0.05)); }
+.notify-folder-row:focus-within { outline: 2px solid var(--primary, #2c5aa0); outline-offset: -2px; }
+.notify-folder-row:has(input:checked) { background: rgba(44, 90, 160, 0.06); }
+.notify-folder-row:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .notify-folder-row .notify-folder-name { flex: 1; }
-.notify-badges { display: flex; gap: 4px; }
+.notify-folder-row .notify-status {
+  font-size: 12px;
+  color: var(--fg-muted);
+  min-width: 1.5em;
+  text-align: right;
+  transition: opacity 0.18s ease;
+}
+.notify-folder-row .notify-status.saved { color: #2a8a2a; }
+.notify-folder-row .notify-status.err { color: #c00; }
+
+/* ─────── Badges ─────── */
+.notify-badges { display: flex; gap: 4px; align-items: center; }
 .notify-badge {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 1px 7px;
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 500;
+  white-space: nowrap;
 }
 .notify-badge.inbox { background: rgba(80, 130, 200, 0.15); color: #2c5aa0; }
 .notify-badge.junk  { background: rgba(180, 80, 80, 0.15); color: #a02c2c; }
 .notify-badge.warn  { background: rgba(212, 160, 23, 0.15); color: #8a6500; cursor: help; }
+
+@media (prefers-color-scheme: dark) {
+  .notify-folder-row:has(input:checked) { background: rgba(80, 130, 200, 0.12); }
+  .notify-bulk-btn { background: rgba(255,255,255,0.05); }
+  .notify-badge.inbox { background: rgba(120, 170, 230, 0.18); color: #aac9f0; }
+  .notify-badge.junk  { background: rgba(220, 130, 130, 0.18); color: #f0aaaa; }
+  .notify-badge.warn  { background: rgba(240, 200, 90, 0.18); color: #f0d488; }
+}
