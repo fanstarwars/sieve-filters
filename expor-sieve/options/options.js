@@ -588,7 +588,7 @@ async function renderNotifySection() {
     return;
   }
 
-  const imapAccounts = (accounts || []).filter(a => a.type === 'imap' || !a.type);
+  const imapAccounts = (state.accounts || []).filter(a => a.type === 'imap' || !a.type);
   if (imapAccounts.length === 0) {
     list.append(el('p', { class: 'section-hint' },
       i18n('options_notify_no_accounts', 'Нет IMAP-аккаунтов.')));
