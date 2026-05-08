@@ -642,8 +642,11 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
           catch (_e) { /* ignore */ }
           if (serverType !== "imap") return { supported: false, enabled: null };
 
+          // nsIMsgIncomingServer.key — это `serverN` суффикс в pref-namespace.
+          // Атрибут IDL называется `key` (не `serverKey`), см.
+          // mailnews/base/public/nsIMsgIncomingServer.idl: attribute ACString key.
           let key = "";
-          try { key = String(server.serverKey || ""); }
+          try { key = String(server.key || ""); }
           catch (_e) { /* ignore */ }
           if (!key) return { supported: false, enabled: null };
 
@@ -685,8 +688,11 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
           catch (_e) { /* ignore */ }
           if (serverType !== "imap") return { supported: false, enabled: null };
 
+          // nsIMsgIncomingServer.key — это `serverN` суффикс в pref-namespace.
+          // Атрибут IDL называется `key` (не `serverKey`), см.
+          // mailnews/base/public/nsIMsgIncomingServer.idl: attribute ACString key.
           let key = "";
-          try { key = String(server.serverKey || ""); }
+          try { key = String(server.key || ""); }
           catch (_e) { /* ignore */ }
           if (!key) return { supported: false, enabled: null };
 
