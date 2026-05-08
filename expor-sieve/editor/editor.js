@@ -11,7 +11,7 @@ import {
   FIELDS, ACTIONS, opsForField, t,
 } from '../lib/rule_form.js';
 import { validateRule } from '../lib/rule_model.js';
-import { decodeIMAPUTF7 } from '../lib/imap_utf7.js';
+import { toCanonical, toDisplay, findMatch } from '../lib/folder_path.js';
 import { filterUsableFolders } from '../lib/folder_filter.js';
 
 function el(tag, attrs = {}, ...children) {
@@ -46,49 +46,8 @@ function defaultCondition() {
   return { field: 'from', op: 'contains', value: '' };
 }
 
-/**
- * Find which `folders[i].path` corresponds to `wanted` by trying several
- * normalisations in order:
- *   1. raw equality
- *   2. strip leading slash on both
- *   3. decode IMAP modified UTF-7 + strip slash on both
- *   4. case-insensitive over (3) — IMAP folder names are case-insensitive
- *      in practice (INBOX/Inbox/inbox same), and TB returns mixed case
- *      depending on server.
- *   5. last-segment match — TB-import paths from `walking parents` may
- *      collapse parent names differently than `browser.folders.query`
- *      especially for Personal namespace prefixes.
- *
- * Returns `f.path` of the matched folder, or null.
- */
-function findMatchingFolderPath(wanted, folders) {
-  if (!wanted || !folders || !folders.length) return null;
-  const stripSlash = (s) => String(s || '').replace(/^\/+/, '');
-  const decode = (s) => decodeIMAPUTF7(stripSlash(s));
-  const lower = (s) => decode(s).toLowerCase();
-  const lastSeg = (s) => {
-    const d = decode(s);
-    const i = d.lastIndexOf('/');
-    return i >= 0 ? d.slice(i + 1) : d;
-  };
-
-  // Strategy 1: raw equality.
-  for (const f of folders) if (f.path === wanted) return f.path;
-  // Strategy 2: strip slash.
-  for (const f of folders) if (stripSlash(f.path) === stripSlash(wanted)) return f.path;
-  // Strategy 3: decoded + stripped.
-  for (const f of folders) if (decode(f.path) === decode(wanted)) return f.path;
-  // Strategy 4: case-insensitive decoded.
-  for (const f of folders) if (lower(f.path) === lower(wanted)) return f.path;
-  // Strategy 5: last segment match (case-insensitive).
-  const wantedLast = lastSeg(wanted).toLowerCase();
-  if (wantedLast) {
-    for (const f of folders) if (lastSeg(f.path).toLowerCase() === wantedLast) return f.path;
-  }
-  return null;
-}
 function defaultAction(folders) {
-  return { type: 'fileinto', folder: folders?.[0]?.path || '' };
+  return { type: 'fileinto', folder: toCanonical(folders?.[0]?.path) };
 }
 
 /**
@@ -287,7 +246,7 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
     const typeSel = makeSelect(ACTIONS, a.type, (v) => {
       a.type = v;
       delete a.folder; delete a.address;
-      if (v === 'fileinto' || v === 'copy') a.folder = folders[0]?.path || '';
+      if (v === 'fileinto' || v === 'copy') a.folder = toCanonical(folders[0]?.path);
       if (v === 'redirect') a.address = '';
       markDirty();
       redrawActions();
@@ -296,40 +255,36 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
 
     if (a.type === 'fileinto' || a.type === 'copy') {
       if (folders && folders.length) {
-        // value — raw IMAP-path (Sieve/Dovecot хотят его как есть);
-        // текст option — декодированный modified-UTF-7 для читаемости (кириллица).
-        const renderLabel = (f) => {
-          const raw = (f.path || f.name || '').replace(/^\//, '');
-          return decodeIMAPUTF7(raw) || '/';
-        };
-        const matched = findMatchingFolderPath(a.folder, folders);
+        // Все папки нормализуем в canonical (decoded Unicode без leading '/').
+        // Это значение и кладётся в a.folder — единый формат хранения, см.
+        // lib/folder_path.js. Сериализация в Sieve (через toSieve) кодирует
+        // обратно в IMAP modified UTF-7 — нам тут об этом думать не надо.
+        const matched = findMatch(a.folder, folders);
         const sel = el('select');
         // Если a.folder задан, но мы не нашли соответствие в текущем accountId —
         // вставляем «orphan»-option в начало, чтобы юзер видел реальное имя
         // и не получал silent-mismatch (раньше select показывал пусто).
-        const showOrphan = a.folder && !matched;
-        if (showOrphan) {
-          const orphan = el('option', { value: a.folder },
-            (decodeIMAPUTF7(String(a.folder).replace(/^\/+/, '')) || a.folder)
-              + ' (' + (t('ed_folder_orphan') || 'не найдена в этом ящике') + ')');
+        const wantedCanon = toCanonical(a.folder);
+        if (wantedCanon && !matched) {
+          const orphan = el('option', { value: wantedCanon },
+            wantedCanon + ' (' + (t('ed_folder_orphan') || 'не найдена в этом ящике') + ')');
           orphan.selected = true;
           sel.append(orphan);
         }
         for (const f of folders) {
-          const o = el('option', { value: f.path }, renderLabel(f));
-          if (matched && f.path === matched) o.selected = true;
+          const canon = toCanonical(f.path);
+          const o = el('option', { value: canon }, toDisplay(f.path) || '/');
+          if (matched && f.path === matched.path) o.selected = true;
           sel.append(o);
         }
-        if (!a.folder && folders[0]) a.folder = folders[0].path;
-        // При match — синхронизируем a.folder с canonical TB-path (UTF-7-encoded
-        // c leading slash). Sieve-adapter затем strip'ает слэш при serialise.
-        if (matched) a.folder = matched;
+        if (!a.folder && folders[0]) a.folder = toCanonical(folders[0].path);
+        if (matched) a.folder = toCanonical(matched.path);
         sel.value = a.folder;
         sel.addEventListener('change', () => { a.folder = sel.value; markDirty(); });
         line.append(sel);
       } else {
-        const inp = el('input', { type: 'text', placeholder: 'INBOX/Folder', value: a.folder || '' });
-        inp.addEventListener('input', () => { a.folder = inp.value; markDirty(); });
+        const inp = el('input', { type: 'text', placeholder: 'INBOX/Folder', value: toDisplay(a.folder) });
+        inp.addEventListener('input', () => { a.folder = toCanonical(inp.value); markDirty(); });
         line.append(inp);
       }
     } else if (a.type === 'redirect') {

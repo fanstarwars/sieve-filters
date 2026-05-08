@@ -684,6 +684,18 @@ browser.runtime.onMessage.addListener(async (msg) => {
           }
           if (idx >= 0) {
             updated[idx] = { ...updated[idx], ...incoming };
+            // Move-up/down/top/bottom: writeCombined нормализует r.order в
+            // позицию правила в массиве, поэтому одного обновления поля
+            // r.order недостаточно — нужно физически переставить элемент.
+            // Без этой перестановки порядок «откатывался» на сервере при
+            // последующем reload (см. жалобу в 0.12.5: «правило кидаю в
+            // начало, открываю — лежит где было»).
+            if (typeof incoming.order === 'number') {
+              const moved = updated.splice(idx, 1)[0];
+              const target = Math.max(0, Math.min(updated.length, incoming.order));
+              updated.splice(target, 0, moved);
+              idx = target;
+            }
           } else {
             const newRule = {
               ...incoming,

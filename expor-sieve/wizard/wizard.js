@@ -7,7 +7,7 @@ import { newRule } from '../lib/rule_model.js';
 import { t } from '../lib/rule_form.js';
 import { TEMPLATES, applyActionsToRule } from './templates.js';
 import { openEditor } from '../editor/editor.js';
-import { decodeIMAPUTF7 } from '../lib/imap_utf7.js';
+import { toDisplay, toCanonical } from '../lib/folder_path.js';
 import { DEFAULTS as PREF_DEFAULTS } from '../lib/wizard_prefs.js';
 import { filterUsableFolders } from '../lib/folder_filter.js';
 
@@ -170,9 +170,10 @@ function renderFolders() {
     return;
   }
   for (const f of state.visibleFolders) {
-    const raw = (f.path || f.name || '').replace(/^\//, '');
-    const label = decodeIMAPUTF7(raw) || '/';
-    sel.append(el('option', { value: f.path }, label));
+    // value — canonical (decoded Unicode без leading '/'). Дальше в
+    // applyActionsToRule оно попадёт в a.folder; sieve_adapter.toSieve
+    // закодирует обратно в mUTF7 при записи в скрипт.
+    sel.append(el('option', { value: toCanonical(f.path) }, toDisplay(f.path) || '/'));
   }
   sel.disabled = !$('actFileinto').checked;
 }
@@ -192,7 +193,7 @@ function buildDraft() {
   // поэтому fallback берём из них же.
   applyActionsToRule(draft, {
     fileinto: $('actFileinto').checked,
-    folder: $('actFolderSel').value || (state.visibleFolders[0]?.path || ''),
+    folder: $('actFolderSel').value || toCanonical(state.visibleFolders[0]?.path),
     star: $('actStar').checked,
     flag: $('actFlag').checked,
   }, state.visibleFolders);

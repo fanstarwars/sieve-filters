@@ -24,7 +24,7 @@
 //   работать без правок.
 
 import { validateRule } from './rule_model.js';
-import { decodeIMAPUTF7 } from './imap_utf7.js';
+import { toCanonical, toDisplay, findMatch } from './folder_path.js';
 import { filterUsableFolders } from './folder_filter.js';
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ export function defaultCondition() {
 }
 
 export function defaultAction(folders = []) {
-  return { type: 'fileinto', folder: folders[0]?.path || '' };
+  return { type: 'fileinto', folder: toCanonical(folders[0]?.path) };
 }
 
 // ── короткое описание ────────────────────────────────────────────────────────
@@ -119,8 +119,8 @@ export function describeCondition(c) {
 
 export function describeAction(a) {
   switch (a.type) {
-    case 'fileinto':  return t('desc_in_folder', decodeIMAPUTF7(a.folder) || '?');
-    case 'copy':      return t('desc_copy_folder', decodeIMAPUTF7(a.folder) || '?');
+    case 'fileinto':  return t('desc_in_folder', toDisplay(a.folder) || '?');
+    case 'copy':      return t('desc_copy_folder', toDisplay(a.folder) || '?');
     case 'mark_read': return t('desc_mark_read');
     case 'flag':      return t('desc_flag');
     case 'redirect':  return t('desc_redirect', a.address || '?');
@@ -330,7 +330,7 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
     const typeSel = makeSelect(ACTIONS, a.type, (v) => {
       a.type = v;
       delete a.folder; delete a.address;
-      if (v === 'fileinto' || v === 'copy') a.folder = folders[0]?.path || '';
+      if (v === 'fileinto' || v === 'copy') a.folder = toCanonical(folders[0]?.path);
       if (v === 'redirect') a.address = '';
       redrawActions();
     });
@@ -338,34 +338,36 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
 
     if (a.type === 'fileinto' || a.type === 'copy') {
       if (folders && folders.length) {
+        // Все три формата (TB-canonical c '/', Sieve-raw mUTF7, Unicode-импорт)
+        // приводятся к одному canonical через lib/folder_path.js. Хранение в
+        // a.folder = canonical, текст в UI = display, запись в Sieve = toSieve.
         const sel = el('select');
-        // browser.folders.query path в modified UTF-7 (`/INBOX/&BC8DUARDBA-`);
-        // импортированные/legacy правила — в Unicode (`INBOX/InvoiceVendor`).
-        // Сравниваем по decoded + slash-нормализованной форме.
-        const norm = (s) => decodeIMAPUTF7(String(s || '').replace(/^\/+/, ''));
-        const target = norm(a.folder);
-        let matched = null;
+        const matched = findMatch(a.folder, folders);
+        const wantedCanon = toCanonical(a.folder);
+        if (wantedCanon && !matched) {
+          // orphan-папка (не нашлась в этом аккаунте) — показываем явно,
+          // чтобы юзер не получал silent-mismatch с пустым select.
+          const orphan = el('option', { value: wantedCanon },
+            wantedCanon + ' (' + (t('ed_folder_orphan') || 'не найдена в этом ящике') + ')');
+          orphan.selected = true;
+          sel.append(orphan);
+        }
         for (const f of folders) {
-          // value — raw IMAP-path (Sieve/Dovecot его понимают как есть);
-          // текст — декодированный modified-UTF-7 для читаемости (кириллица).
-          const display = decodeIMAPUTF7(f.path || f.name || '');
-          const o = el('option', { value: f.path }, display || '—');
-          if (norm(f.path) === target) {
-            o.selected = true;
-            matched = f.path;
-          }
+          const canon = toCanonical(f.path);
+          const o = el('option', { value: canon }, toDisplay(f.path) || '—');
+          if (matched && f.path === matched.path) o.selected = true;
           sel.append(o);
         }
         sel.addEventListener('change', () => { a.folder = sel.value; });
-        if (matched) a.folder = matched;
-        if (!a.folder && folders.length) a.folder = folders[0].path;
+        if (matched) a.folder = toCanonical(matched.path);
+        if (!a.folder && folders.length) a.folder = toCanonical(folders[0].path);
         row.append(sel);
       } else {
         const inp = el('input', {
           type: 'text', placeholder: 'INBOX/Folder',
-          value: a.folder || '',
+          value: toDisplay(a.folder),
         });
-        inp.addEventListener('input', () => { a.folder = inp.value; });
+        inp.addEventListener('input', () => { a.folder = toCanonical(inp.value); });
         row.append(inp);
       }
     } else if (a.type === 'redirect') {

@@ -45,6 +45,7 @@
 // попадать в default-set чекбоксов в preview-диалоге.
 
 import { newRule } from './rule_model.js';
+import { toCanonical } from './folder_path.js';
 
 const TEXT_OP_MAP = {
   Contains: 'contains',
@@ -154,22 +155,22 @@ function mapAction(action, ruleName) {
   const type = action.type || '';
   switch (type) {
     case 'MoveToFolder': {
-      const folder = action.targetFolderPath
+      const raw = action.targetFolderPath
         || pathFromUriFallback(action.targetFolderUri)
         || '';
-      if (!folder) {
+      if (!raw) {
         return { skip: true, warning: `«${ruleName}»: действие «Переместить» без целевой папки, пропущено.` };
       }
-      return { action: { type: 'fileinto', folder } };
+      return { action: { type: 'fileinto', folder: toCanonical(raw) } };
     }
     case 'CopyToFolder': {
-      const folder = action.targetFolderPath
+      const raw = action.targetFolderPath
         || pathFromUriFallback(action.targetFolderUri)
         || '';
-      if (!folder) {
+      if (!raw) {
         return { skip: true, warning: `«${ruleName}»: действие «Копировать» без целевой папки, пропущено.` };
       }
-      return { action: { type: 'copy', folder } };
+      return { action: { type: 'copy', folder: toCanonical(raw) } };
     }
     case 'MarkRead':
       return { action: { type: 'mark_read' } };

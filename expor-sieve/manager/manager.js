@@ -13,7 +13,7 @@ import { newRule } from '../lib/rule_model.js';
 import { t } from '../lib/rule_form.js';
 import { openEditor } from '../editor/editor.js';
 import { runRuleOnFolder, findFolderByPath } from '../lib/local_runner.js';
-import { decodeIMAPUTF7 } from '../lib/imap_utf7.js';
+import { toDisplay } from '../lib/folder_path.js';
 import { DEFAULTS as PREF_DEFAULTS } from '../lib/wizard_prefs.js';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ function renderRunFolders() {
   const opt0 = el('option', { value: '' }, t('mgr_run_pick_folder'));
   sel.append(opt0);
   for (const f of (state.folders || [])) {
-    const display = decodeIMAPUTF7(f.path || f.name || '') || '—';
+    const display = toDisplay(f.path) || f.name || '—';
     sel.append(el('option', { value: f.path }, display));
   }
   // Сохраняем предыдущий выбор, если папка ещё в списке.

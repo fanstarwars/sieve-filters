@@ -20,6 +20,7 @@
 import { defaultAction } from './actions.js';
 import { cleanSubjectForName, DEFAULTS as PREF_DEFAULTS } from '../lib/wizard_prefs.js';
 import { t } from '../lib/rule_form.js';
+import { toCanonical } from '../lib/folder_path.js';
 
 function trunc(s, n) {
   s = String(s || '').trim();
@@ -204,7 +205,7 @@ export function applyActionsToRule(rule, opts, folders) {
   // opts: { fileinto: bool, tags: bool, important: bool, star: bool, flag: bool }
   rule.actions = [];
   if (opts.fileinto) {
-    const folder = opts.folder || folders?.[0]?.path || '';
+    const folder = toCanonical(opts.folder || folders?.[0]?.path);
     rule.actions.push({ type: 'fileinto', folder });
   }
   if (opts.star || opts.flag) {

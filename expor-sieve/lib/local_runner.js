@@ -24,40 +24,23 @@
 // Прогресс-callback дёргается каждые ~50 сообщений (для UI).
 // Abort через AbortSignal — корректно прерывает на ближайшей итерации.
 
-import { decodeIMAPUTF7 } from './imap_utf7.js';
+import { findMatch, toCanonical } from './folder_path.js';
 
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Нормализует path для сравнения с f.path из browser.folders.query().
- * Strips leading '/' (sieve_adapter тоже это делает при сериализации).
- */
-function normalizePath(p) {
-  return String(p || '').replace(/^\/+/, '');
-}
-
-/**
- * Ищет folder в массиве по path. Сравнение учитывает оба варианта: с/без
- * leading '/'. Также пробует декодированную UTF-7 версию (на случай если в
- * правиле сохранён уже-декодированный путь).
+ * Ищет folder в массиве по path. Принимает любой формат пути (TB-canonical
+ * c '/', Sieve-raw, Unicode-decoded — см. lib/folder_path.js). Делегирует
+ * единому findMatch.
  *
  * @param {Array<{id, name, path}>} folders
  * @param {string} path
  * @returns {{id, name, path}|null}
  */
 export function findFolderByPath(folders, path) {
-  if (!Array.isArray(folders) || !path) return null;
-  const want = normalizePath(path);
-  const wantDecoded = decodeIMAPUTF7(want);
-  for (const f of folders) {
-    if (!f) continue;
-    const have = normalizePath(f.path || '');
-    if (have === want) return f;
-    if (decodeIMAPUTF7(have) === wantDecoded) return f;
-  }
-  return null;
+  return findMatch(path, folders);
 }
 
 /**
@@ -77,7 +60,7 @@ export function findTrashFolder(folders) {
   for (const f of folders) {
     if (!f) continue;
     const name = String(f.name || '').toLowerCase();
-    const path = normalizePath(f.path || '').toLowerCase();
+    const path = toCanonical(f.path).toLowerCase();
     if (name === 'trash' || path === 'trash' || path.endsWith('/trash')) return f;
   }
   return null;

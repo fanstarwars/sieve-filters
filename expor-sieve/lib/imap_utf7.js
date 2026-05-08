@@ -1,16 +1,22 @@
-// IMAP modified UTF-7 (RFC 3501 §5.1.3) — декодер для отображения mailbox-имён.
+// IMAP modified UTF-7 (RFC 3501 §5.1.3) — декодер и кодер для mailbox-имён.
 //
 // Зачем: Thunderbird `browser.folders.query()` возвращает path в IMAP-нотации,
-// например "INBOX/&BCAEMARBBEEESwQ7BDoEMA-" вместо "INBOX/Россылки".
-// Sieve / Dovecot ожидают raw IMAP-имя; UI должен показать декодированное.
-//
-// Кодирование пропускаем — нам не нужно (mailcow и Dovecot работают с raw).
+// например "INBOX/&BCAEPgRBBEEESwQ7BDoEOA-" вместо "INBOX/Россылки".
+// Dovecot/Pigeonhole тоже принимает имя только в этой нотации — поэтому при
+// сериализации в Sieve нужна кодировка обратно (см. lib/folder_path.js).
+// UI показывает декодированную версию.
 //
 // Алгоритм декодирования:
-//   - "&-"        → "&"
+//   - "&-"         → "&"
 //   - "&<base64>-" → base64 → UTF-16BE → строка
-//     (но base64 здесь модифицированный: '/' заменён на ',')
-//   - всё остальное (printable ASCII) — как есть.
+//     (base64 здесь модифицированный: '/' заменён на ',')
+//   - всё остальное (printable ASCII 0x20-0x7E) — как есть.
+//
+// Алгоритм кодирования (RFC 3501 §5.1.3):
+//   - ASCII printable (0x20-0x7E), кроме '&' — как есть; '&' → "&-".
+//   - Любой блок non-ASCII символов: интерпретируются как UTF-16 code units,
+//     записываются как UTF-16BE байты, base64 (без '=' padding, '/' → ','),
+//     обёрнуто в "&…-".
 
 /**
  * @param {string} s   IMAP modified UTF-7 строка
@@ -62,4 +68,35 @@ export function decodeIMAPUTF7(s) {
 function padBase64(b64) {
   const m = b64.length % 4;
   return m === 0 ? b64 : b64 + '='.repeat(4 - m);
+}
+
+/**
+ * @param {string} s   читаемая Unicode строка
+ * @returns {string}   IMAP modified UTF-7
+ */
+export function encodeIMAPUTF7(s) {
+  if (typeof s !== 'string' || s.length === 0) return s || '';
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const c = s.charCodeAt(i);
+    if (c >= 0x20 && c <= 0x7E) {
+      out += s[i] === '&' ? '&-' : s[i];
+      i++;
+      continue;
+    }
+    // Собираем максимальный блок non-ASCII подряд (§5.1.3: один shift на блок).
+    let bin = '';
+    while (i < s.length) {
+      const cc = s.charCodeAt(i);
+      if (cc >= 0x20 && cc <= 0x7E) break;
+      // UTF-16BE: high byte, затем low byte. charCodeAt даёт code unit,
+      // surrogates записываются как два code unit'а — это то, что и хочет mUTF7.
+      bin += String.fromCharCode((cc >> 8) & 0xFF) + String.fromCharCode(cc & 0xFF);
+      i++;
+    }
+    const b64 = btoa(bin).replace(/=+$/, '').replace(/\//g, ',');
+    out += '&' + b64 + '-';
+  }
+  return out;
 }

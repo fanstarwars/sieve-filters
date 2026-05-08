@@ -39,6 +39,8 @@
 //
 // Маппинг см. в TZ.md §8.
 
+import { toSieve, toCanonical } from './folder_path.js';
+
 export const RULE_MARKER_V1 = '# expor-sieve v1 managed';
 export const RULE_MARKER_V2 = '# expor-sieve v2 managed';
 
@@ -174,23 +176,21 @@ function buildTest(cond /* , requires */) {
 // Build Sieve action lines from an Action
 // ---------------------------------------------------------------------------
 
-// Thunderbird `browser.folders.query()` возвращает path c ведущим '/'
-// (например `/INBOX/Logistics`), а Dovecot Pigeonhole отбивает такие имена:
-//   "Invalid mailbox name: Begins with hierarchy separator".
-// Нормализуем при сериализации — снимаем лидирующие '/'.
-function normalizeFolder(p) {
-  return String(p || '').replace(/^\/+/, '');
-}
-
+// Сериализуем имя папки через единый folder_path.toSieve:
+//   - снимает leading '/' (Dovecot Pigeonhole иначе отбивает: «Begins with
+//     hierarchy separator»);
+//   - кодирует не-ASCII в IMAP modified UTF-7 (RFC 3501 §5.1.3).
+//     Без этого fileinto "INBOX/Россылки" не сматчит реальную серверную
+//     папку, у которой имя на сервере хранится как mUTF7.
 function buildAction(action, requires) {
   switch (action.type) {
     case 'fileinto':
       requires.add('fileinto');
-      return `fileinto ${quoteSieveString(normalizeFolder(action.folder))};`;
+      return `fileinto ${quoteSieveString(toSieve(action.folder))};`;
     case 'copy':
       requires.add('fileinto');
       requires.add('copy');
-      return `fileinto :copy ${quoteSieveString(normalizeFolder(action.folder))};`;
+      return `fileinto :copy ${quoteSieveString(toSieve(action.folder))};`;
     case 'mark_read':
       requires.add('imap4flags');
       return `addflag "\\\\Seen";`;
@@ -577,7 +577,9 @@ function parseAction(stmt) {
   if (m) {
     const q = readQuoted(m[1].trim(), 0);
     if (!q) throw new Error(`Bad copy: ${stmt}`);
-    return { type: 'copy', folder: q.value };
+    // В Sieve-script имя в mUTF7. Кладём в Rule в canonical (decoded Unicode)
+    // — это инвариант хранения: см. lib/folder_path.js.
+    return { type: 'copy', folder: toCanonical(q.value) };
   }
   // fileinto "folder"
   m = trimmed.match(/^fileinto\s+(.+)$/);
@@ -585,7 +587,7 @@ function parseAction(stmt) {
     const q = readQuoted(m[1].trim(), 0);
     if (!q) throw new Error(`Bad fileinto: ${stmt}`);
     if (q.value === 'Trash') return { type: 'trash' };
-    return { type: 'fileinto', folder: q.value };
+    return { type: 'fileinto', folder: toCanonical(q.value) };
   }
   // addflag "\\Seen" / "\\Flagged"
   m = trimmed.match(/^addflag\s+(.+)$/);
