@@ -1,33 +1,27 @@
 // lib/folder_path.js — единый инструмент работы с именами/путями папок.
 //
-// Существуют ТРИ разных формата одного и того же пути, которые встречаются
-// в проекте; до этого модуля каждый файл нормализовал по-своему, что давало
-// рассинхрон (видимо в форме / молча не работающие фильтры на сервере).
+// Форматы, встречающиеся в проекте:
 //
-//   1. TB-canonical — то, что отдаёт `browser.folders.query()` в `f.path`.
-//      Для IMAP это `/INBOX/&BCAEPgRBBEEESwQ7BDoEOA-` — IMAP modified UTF-7
-//      с ведущим '/'. Для POP3/Local — `/Inbox/Sub` (декодированный URI).
-//      См. mozilla/comm-central ExtensionAccounts.sys.mjs:getFolderPath.
+//   1. TB-canonical — `browser.folders.query()` в `f.path`. Для IMAP это
+//      `/INBOX/&BCAEPgRBBEEESwQ7BDoEOA-` (mUTF7 с ведущим '/'). Для POP3/Local —
+//      `/Inbox/Sub`. См. mozilla/comm-central ExtensionAccounts.sys.mjs:getFolderPath.
 //
-//   2. Sieve-raw — то, что Dovecot/Pigeonhole принимает в `fileinto "...";`.
-//      Тот же IMAP-modified-UTF-7, но БЕЗ ведущего '/'. Pigeonhole отбивает
-//      имена с leading separator («Begins with hierarchy separator»).
+//   2. Sieve и Pigeonhole принимают имя в `fileinto "..."` в **UTF-8 / Unicode**.
+//      mUTF7 — это формат IMAP-протокола НА ПРОВОДЕ; Sieve работает уровнем выше,
+//      на уже декодированных именах. Подтверждено вживую: на нашем Dovecot
+//      `doveadm mailbox status "INBOX/&BBAELQQcBBc-"` → "Mailbox doesn't exist",
+//      а `doveadm mailbox status "INBOX/АЭМЗ"` → exists. Поэтому в Sieve пишем
+//      Unicode, без leading '/'. Pigeonhole сам конвертирует в IMAP-уровень
+//      при необходимости.
 //
-//   3. Canonical (наш внутренний формат) — decoded Unicode, без leading '/'.
-//      Удобно сравнивать, удобно показывать, идемпотентно: toCanonical(canon)
-//      возвращает ту же строку.
+//   3. Canonical (наш внутренний формат) — decoded Unicode без leading '/'.
+//      Идемпотентно: toCanonical(canon) === canon.
 //
-// Контракт: ВСЕ места, где имя папки сохраняется (action.folder в Rule)
-// или сравнивается, проходят через toCanonical. Сериализация в Sieve —
-// через toSieve (это место единственное, где идёт mUTF7-кодирование).
-//
-// Импорт TB Quick Filter (см. local_filter_mapper.js) даёт `targetFolderPath`
-// в виде Unicode (Experiment-API строит путь из nsIMsgFolder.name, который
-// уже декодирован), — toCanonical его примет без изменений; toSieve при
-// записи закодирует обратно в mUTF7. Это и есть фикс «фильтрация молча
-// не работает» из bug2.
+// Контракт: action.folder в Rule всегда хранится в canonical-форме. Сериализация
+// в Sieve — через toSieve (= тот же canonical). Сравнения с f.path из TB —
+// через findMatch (нормализует обе стороны).
 
-import { decodeIMAPUTF7, encodeIMAPUTF7 } from './imap_utf7.js';
+import { decodeIMAPUTF7 } from './imap_utf7.js';
 
 const stripLeadingSlash = (s) => String(s ?? '').replace(/^\/+/, '');
 
@@ -46,16 +40,15 @@ export function toCanonical(path) {
 }
 
 /**
- * Привести к виду, который кладётся в Sieve-script: IMAP modified UTF-7
- * без ведущего '/'. Если на входе уже mUTF7 — encode идемпотентен (ASCII
- * printable проходит как есть; '&' → '&-' — это РАЗОВОЕ срабатывание, его
- * мы избегаем тем что сначала декодируем, а потом кодируем).
+ * Привести к виду, который кладётся в Sieve-script: Unicode/UTF-8 без
+ * ведущего '/'. Pigeonhole принимает fileinto-аргумент в Unicode (см.
+ * хедер модуля). Совпадает с canonical.
  *
  * @param {string} path
  * @returns {string}
  */
 export function toSieve(path) {
-  return encodeIMAPUTF7(toCanonical(path));
+  return toCanonical(path);
 }
 
 /**

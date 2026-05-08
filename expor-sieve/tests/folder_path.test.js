@@ -24,8 +24,8 @@ import { ruleToSieve, sieveToRule } from '../lib/sieve_adapter.js';
 const ROSSYLKI_UNICODE = 'INBOX/Россылки';
 const ROSSYLKI_MUTF7 = 'INBOX/&BCAEPgRBBEEESwQ7BDoEOA-';
 
-describe('Bug 2: импорт TB Quick Filter с кириллической папкой → Sieve', () => {
-  it('targetFolderPath="INBOX/Россылки" (Unicode) → fileinto должен быть в IMAP mUTF7', () => {
+describe('Импорт TB Quick Filter с кириллической папкой → Sieve', () => {
+  it('targetFolderPath="INBOX/Россылки" → fileinto в Unicode (Pigeonhole ждёт UTF-8, не mUTF7)', () => {
     const tb = {
       name: 'r1', enabled: true, matchAll: true,
       searchTerms: [{ attrib: 'Subject', op: 'Contains', value: 'a', booleanAnd: true }],
@@ -35,13 +35,13 @@ describe('Bug 2: импорт TB Quick Filter с кириллической па
     rule.name = 'r1';
     const sieve = ruleToSieve(rule);
 
-    // Dovecot Pigeonhole ждёт mUTF7. Если в Sieve уйдёт буквальная кириллица,
-    // фильтр не сматчит реальную серверную папку.
-    expect(sieve).toContain(`fileinto "${ROSSYLKI_MUTF7}";`);
-    expect(sieve).not.toContain(`fileinto "${ROSSYLKI_UNICODE}";`);
+    // Pigeonhole принимает имя папки в UTF-8/Unicode, mUTF7 ему не подходит:
+    // doveadm mailbox status "INBOX/&...-" → "Mailbox doesn't exist".
+    expect(sieve).toContain(`fileinto "${ROSSYLKI_UNICODE}";`);
+    expect(sieve).not.toContain(`fileinto "${ROSSYLKI_MUTF7}";`);
   });
 
-  it('round-trip: кириллическая папка выживает Rule → Sieve → Rule', () => {
+  it('round-trip: кириллическая папка выживает Rule → Sieve → Rule в любом формате на входе', () => {
     // Контракт хранения a.folder = canonical (decoded Unicode без leading '/').
     // На входе любой формат (TB-canonical с '/', Sieve-raw mUTF7, Unicode-импорт).
     const inputs = [
@@ -57,8 +57,8 @@ describe('Bug 2: импорт TB Quick Filter с кириллической па
         stopAfter: false,
       };
       const sieve = ruleToSieve(rule);
-      // В Sieve-script всегда mUTF7 без '/' — Dovecot матчит реальную папку.
-      expect(sieve).toContain(`fileinto "${ROSSYLKI_MUTF7}";`);
+      // В Sieve-script всегда Unicode без '/' — это то, что Pigeonhole ждёт.
+      expect(sieve).toContain(`fileinto "${ROSSYLKI_UNICODE}";`);
       // После парсинга назад — canonical Unicode.
       const back = sieveToRule(sieve);
       expect(back.actions[0].folder).toBe(ROSSYLKI_UNICODE);

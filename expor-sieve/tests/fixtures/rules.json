@@ -181,7 +181,7 @@
         ],
         "stopAfter": false
       },
-      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"copy\"];\n\nif size :over 5M {\n  fileinto :copy \"&BBAEQARFBDgEMg-/&BBEEPgQ7BEwESAQ4BDU-\";\n}\n"
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\", \"copy\"];\n\nif size :over 5M {\n  fileinto :copy \"Архив/Большие\";\n}\n"
     },
     {
       "name": "size-under-kb",
@@ -234,7 +234,7 @@
         ],
         "stopAfter": true
       },
-      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif allof (\n  address :contains \"from\" \"@partner.ru\",\n  header :contains \"content-type\" \"multipart/\"\n) {\n  fileinto \"&BBQEPgQzBD4EMgQ+BEAESw-\";\n  stop;\n}\n"
+      "sieve": "# expor-sieve v1 managed\nrequire [\"fileinto\"];\n\nif allof (\n  address :contains \"from\" \"@partner.ru\",\n  header :contains \"content-type\" \"multipart/\"\n) {\n  fileinto \"Договоры\";\n  stop;\n}\n"
     },
     {
       "name": "subject-ends-no-attachment",
