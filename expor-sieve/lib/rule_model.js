@@ -72,12 +72,24 @@ export function validateRule(rule) {
       if (!Array.isArray(a.keywords) || a.keywords.length === 0) {
         return 'Выберите хотя бы одну метку';
       }
-      // Инвариант: каждый keyword начинается с '$' (IMAP user-keyword).
-      // Без '$' Pigeonhole воспримет это как fragment системного флага и
-      // может конфликтовать с Sieve `imap4flags` system-флагами.
+      // RFC 3501 §9: IMAP keyword == atom — любой ASCII char кроме CTL,
+      // пробела и atom-specials `(){%*"\]`. Префикс «$» — лишь конвенция
+      // RFC 5788 для общеизвестных не-персональных кейвордов
+      // ($Forwarded, $Junk и т.п.); пользовательские TB-метки часто
+      // лежат без префикса (e.g. "Project_X" → IMAP keyword "Project_X").
+      // Поэтому валидируем именно atom-форму, а не наличие «$».
+      // Также явно запрещаем system-флаги (\Seen, \Flagged) — для них
+      // есть отдельные action-типы mark_read/flag.
+      const ATOM_BAD = /[\s(){%*"\\\]\x00-\x1f\x7f]/;
       for (const k of a.keywords) {
-        if (typeof k !== 'string' || !k.startsWith('$')) {
-          return 'Метка должна начинаться с символа $';
+        if (typeof k !== 'string' || k.length === 0) {
+          return 'Пустая метка не допускается';
+        }
+        if (k.startsWith('\\')) {
+          return 'Системные флаги (\\Seen, \\Flagged) задаются через отдельные действия';
+        }
+        if (ATOM_BAD.test(k)) {
+          return 'Метка содержит недопустимые символы IMAP keyword';
         }
       }
     }

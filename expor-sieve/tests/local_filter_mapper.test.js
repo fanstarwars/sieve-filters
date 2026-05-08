@@ -334,7 +334,7 @@ describe('mapLocalToRule — actions', () => {
     expect(r.rule.actions).toEqual([{ type: 'tag', keywords: ['$label1'] }]);
   });
 
-  it('AddTag со strValue без $ — нормализуем к $-keyword', () => {
+  it('AddTag со strValue без $ — keyword проходит как есть (TB-кастомные метки часто без $-префикса)', () => {
     const tb = tbFilter({
       searchTerms: [term('Subject', 'Contains', 'a')],
       actions: [action('AddTag', { strValue: 'work' })],
@@ -342,7 +342,7 @@ describe('mapLocalToRule — actions', () => {
     const r = mapLocalToRule(tb);
     expect(r.skipped).toBe(false);
     expect(r.rule.actions[0].type).toBe('tag');
-    expect(r.rule.actions[0].keywords[0].startsWith('$')).toBe(true);
+    expect(r.rule.actions[0].keywords).toEqual(['work']);
   });
 
   it('AddTag без strValue → skip + warning', () => {

@@ -191,16 +191,15 @@ function mapAction(action, ruleName) {
     case 'StopExecution':
       return { stop: true };
     case 'AddTag': {
-      // TB хранит keyword метки в strValue (например, '$label1'). Если он
-      // пуст — пропускаем (не из чего делать tag-action).
+      // TB хранит IMAP keyword метки в strValue (e.g. '$label1' для
+      // системных или 'Project_X' для кастомных — TB сам нормализует
+      // имя в atom при создании метки). Передаём как есть; если что-то
+      // не-atom — validateRule в rule_model.js отбракует.
       const raw = (action.strValue || '').trim();
       if (!raw) {
         return { skip: true, warning: `«${ruleName}»: действие «Добавить метку» без значения, пропущено.` };
       }
-      // На всякий случай — приводим к виду '$keyword' (если пользователь
-      // в TB настроил «голую» метку без $-префикса, считаем custom user-tag).
-      const key = raw.startsWith('$') ? raw : ('$' + raw.replace(/[^A-Za-z0-9_]/g, '_'));
-      return { action: { type: 'tag', keywords: [key] } };
+      return { action: { type: 'tag', keywords: [raw] } };
     }
     // Не поддерживаем (возможно — в будущих версиях):
     case 'Reply':
