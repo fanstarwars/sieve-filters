@@ -599,6 +599,29 @@ export async function tryListCheckNewFoldersFromTB(accountId) {
 }
 
 /**
+ * Experiment API `browser.exporSieveCredentials.getFolderCheckNewBatch`.
+ * Возвращает массив с CheckNew-флагом и метаданными для переданных paths
+ * или null если API недоступно.
+ *
+ * @param {string} accountId
+ * @param {string[]} paths
+ * @returns {Promise<Array<object>|null>}
+ */
+export async function tryGetFolderCheckNewBatchFromTB(accountId, paths) {
+  if (!accountId || !Array.isArray(paths)) return null;
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.getFolderCheckNewBatch !== 'function') return null;
+    const r = await api.getFolderCheckNewBatch(String(accountId), paths.map(String));
+    if (!Array.isArray(r)) return [];
+    return r;
+  } catch (e) {
+    try { console.warn('[expor-sieve] tryGetFolderCheckNewBatchFromTB failed:', e?.message || e); } catch (_e) {}
+    return null;
+  }
+}
+
+/**
  * Experiment API `browser.exporSieveCredentials.setFolderCheckNew`.
  *
  * @param {string} accountId

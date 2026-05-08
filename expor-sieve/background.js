@@ -54,6 +54,7 @@ import {
   tryGetServerCheckAllFoldersFromTB,
   trySetServerCheckAllFoldersFromTB,
   tryListCheckNewFoldersFromTB,
+  tryGetFolderCheckNewBatchFromTB,
   trySetFolderCheckNewFromTB,
   tryListLocalFiltersFromTB,
   tryDeleteLocalFiltersFromTB,
@@ -937,11 +938,48 @@ browser.runtime.onMessage.addListener(async (msg) => {
       }
 
       // Per-folder CheckNew flag — точечный контроль (Этап 2).
+      // Универсальный путь: берём список папок через browser.folders.query
+      // (он работает даже в Snap/Flatpak), извлекаем paths и просим
+      // experiment вернуть для них флаги. Это надёжнее чем walking
+      // root.subFolders в parent-process — у некоторых сборок (Ubuntu Snap
+      // в первую очередь) Array<nsIMsgFolder> может прийти пустым через
+      // XPCOM, хотя webextension API список видит.
       case 'listCheckNewFolders': {
         const accountId = await resolveAccountId(msg.accountId);
         if (!accountId) return [];
-        const r = await tryListCheckNewFoldersFromTB(accountId);
-        return Array.isArray(r) ? r : [];
+
+        // Сначала пробуем нативный путь — может в нормальной сборке всё
+        // работает и нам не надо лишних запросов.
+        const native = await tryListCheckNewFoldersFromTB(accountId);
+        if (Array.isArray(native) && native.length > 0) return native;
+
+        // Fallback: webextension API + per-path batch.
+        try {
+          const folders = await browser.folders.query({ accountId });
+          // Отсекаем root и виртуальные. Для root path === '/'.
+          const usable = (folders || [])
+            .filter(f => f && f.path && f.path !== '/' && !(Array.isArray(f.specialUse) && f.specialUse.includes('virtual')))
+            .map(f => ({ path: f.path, name: f.name }));
+          if (usable.length === 0) return [];
+          const paths = usable.map(f => f.path);
+          const meta = await tryGetFolderCheckNewBatchFromTB(accountId, paths);
+          const metaByPath = new Map((meta || []).map(m => [m.path, m]));
+          return usable.map(f => {
+            const m = metaByPath.get(f.path) || {};
+            return {
+              path: f.path,
+              name: f.name,
+              checkNew: !!m.checkNew,
+              specialUse: Array.isArray(m.specialUse) ? m.specialUse : [],
+              isInbox: !!m.isInbox,
+              isVirtual: !!m.isVirtual,
+              isSubscribed: m.isSubscribed === false ? false : true,
+            };
+          });
+        } catch (e) {
+          console.warn('[expor-sieve] listCheckNewFolders fallback failed:', e?.message || e);
+          return [];
+        }
       }
 
       case 'setFolderCheckNew': {
@@ -971,9 +1009,21 @@ browser.runtime.onMessage.addListener(async (msg) => {
         // header.folder.accountId — accountsRead permission required (он есть).
         // Может быть undefined для external/attached messages.
         const accountId = header.folder?.accountId || null;
+        // Папка, в которой лежит письмо. Wizard использует её как
+        // pre-selected target для fileinto: если юзер делает фильтр из
+        // письма, которое уже в подпапке (например после ручного move
+        // или прошлого фильтра), логично предложить ту же подпапку,
+        // а не первую попавшуюся из списка.
+        const folderPath = header.folder?.path || null;
+        const folderName = header.folder?.name || null;
+        const folderSpecialUse = Array.isArray(header.folder?.specialUse)
+          ? header.folder.specialUse.slice() : [];
         return {
           id,
           accountId,
+          folderPath,
+          folderName,
+          folderSpecialUse,
           author: header.author || '',
           recipients: Array.isArray(header.recipients) ? header.recipients.join(', ') : '',
           ccList: Array.isArray(header.ccList) ? header.ccList.join(', ') : '',

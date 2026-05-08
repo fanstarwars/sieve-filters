@@ -162,6 +162,17 @@ function renderFolders() {
   // адресуются специальными actions (act_trash, act_discard и т.п.).
   state.visibleFolders = filterUsableFolders(state.folders, state.prefs);
 
+  // Если письмо открыто из подпапки (не Inbox/system) — гарантируем что
+  // именно эта папка попадает в visibleFolders, даже если она в норме
+  // была бы скрыта (например, помечена как Junk). Юзер делает фильтр из
+  // конкретного письма, ему нужна именно та папка по умолчанию.
+  const meta = state.meta;
+  const messageFolderPath = meta && typeof meta.folderPath === 'string' ? meta.folderPath : '';
+  if (messageFolderPath && !state.visibleFolders.some(f => f.path === messageFolderPath)) {
+    const found = state.folders.find(f => f.path === messageFolderPath);
+    if (found) state.visibleFolders = [found, ...state.visibleFolders];
+  }
+
   const sel = $('actFolderSel');
   sel.replaceChildren();
   if (!state.visibleFolders.length) {
@@ -174,6 +185,22 @@ function renderFolders() {
     // applyActionsToRule оно попадёт в a.folder; sieve_adapter.toSieve
     // закодирует обратно в mUTF7 при записи в скрипт.
     sel.append(el('option', { value: toCanonical(f.path) }, toDisplay(f.path) || '/'));
+  }
+
+  // Pre-selection: если письмо лежит в подпапке (НЕ inbox), подставляем её
+  // как target. Это самый ожидаемый сценарий «сделать фильтр из письма,
+  // которое я уже руками положил куда надо».
+  if (messageFolderPath) {
+    const isInbox = Array.isArray(meta?.folderSpecialUse)
+      && meta.folderSpecialUse.includes('inbox');
+    if (!isInbox) {
+      const target = toCanonical(messageFolderPath);
+      // Авто-включаем fileinto-чекбокс — без этого <select> остаётся disabled
+      // и juzer не увидит подставленную папку.
+      const fileintoChk = $('actFileinto');
+      if (fileintoChk && !fileintoChk.checked) fileintoChk.checked = true;
+      sel.value = target;
+    }
   }
   sel.disabled = !$('actFileinto').checked;
 }

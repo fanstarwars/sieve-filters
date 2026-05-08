@@ -806,6 +806,74 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
         },
 
         /**
+         * Resolve a batch of folders by accountId+path and return their
+         * CheckNew flag + light metadata. UI uses this when it already has
+         * the folder list from `browser.folders.query` and just needs
+         * per-folder flags — bypasses any subFolders-iteration quirks of
+         * sandboxed builds (Snap/Flatpak).
+         */
+        async getFolderCheckNewBatch(accountId, paths) {
+          const empty = [];
+          if (typeof accountId !== "string" || !accountId) return empty;
+          if (!Array.isArray(paths)) return empty;
+
+          const server = resolveIncomingServer(accountId);
+          if (!server) return empty;
+
+          let serverType = "";
+          try { serverType = String(server.type || "").toLowerCase(); }
+          catch (_e) { /* ignore */ }
+          if (serverType !== "imap") return empty;
+
+          let root = null;
+          try { root = server.rootFolder; }
+          catch (_e) { return empty; }
+          if (!root) return empty;
+
+          let rootURI = "";
+          try { rootURI = String(root.URI || ""); }
+          catch (_e) { /* ignore */ }
+          if (!rootURI) return empty;
+
+          const out = [];
+          for (const path of paths) {
+            const p = typeof path === "string" ? path : "";
+            if (!p) {
+              out.push({ path: p, found: false, checkNew: false, specialUse: [], isInbox: false, isVirtual: false, isSubscribed: false });
+              continue;
+            }
+            const uri = rootURI + p;
+            let folder = null;
+            try {
+              if (MailServices && MailServices.folderLookup
+                  && typeof MailServices.folderLookup.getFolderForURL === "function") {
+                folder = MailServices.folderLookup.getFolderForURL(uri);
+              }
+            } catch (_e) { /* ignore — fall through with found=false */ }
+            if (!folder) {
+              out.push({ path: p, found: false, checkNew: false, specialUse: [], isInbox: false, isVirtual: false, isSubscribed: false });
+              continue;
+            }
+            let flags = 0;
+            try { flags = Number(folder.flags || 0); } catch (_e) { /* ignore */ }
+            let subscribed = true;
+            try {
+              if (typeof folder.subscribed === "boolean") subscribed = !!folder.subscribed;
+            } catch (_e) { /* ignore */ }
+            out.push({
+              path: p,
+              found: true,
+              checkNew:   !!(flags & Ci.nsMsgFolderFlags.CheckNew),
+              specialUse: getSpecialUse(flags),
+              isInbox:    !!(flags & Ci.nsMsgFolderFlags.Inbox),
+              isVirtual:  !!(flags & Ci.nsMsgFolderFlags.Virtual),
+              isSubscribed: subscribed,
+            });
+          }
+          return out;
+        },
+
+        /**
          * Toggle nsMsgFolderFlags::CheckNew on a single folder.
          *
          * Resolve algorithm: build folder URI as `rootFolder.URI + path` (path
