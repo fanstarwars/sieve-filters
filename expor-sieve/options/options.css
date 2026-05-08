@@ -345,3 +345,30 @@ input:disabled { opacity: .7; }
 }
 .about-list a { color: var(--primary); text-decoration: none; }
 .about-list a:hover { text-decoration: underline; }
+
+/* ─────── Notify section: per-server check_all_folders_for_new ─────── */
+#section-notify .section-help {
+  margin: 0 0 12px 0;
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+#section-notify .section-hint {
+  margin: 12px 0 0 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+.notify-list { display: flex; flex-direction: column; gap: 6px; }
+.notify-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.notify-row:hover { background: var(--bg-hover, rgba(0,0,0,0.04)); }
+.notify-row .notify-label { flex: 1; }
+.notify-row .notify-status { color: var(--fg-muted); font-size: 12px; min-width: 0; }
+.notify-row .notify-status.err { color: #c00; }

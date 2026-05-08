@@ -65,6 +65,22 @@
       </div>
     </section>
 
+    <!-- Раздел: Уведомления о новых письмах в подпапках -->
+    <section id="section-notify" class="section">
+      <h2 data-i18n="options_section_notify">Уведомления о новых письмах в подпапках</h2>
+      <p class="section-help" data-i18n="options_notify_help">
+        Когда правило перекладывает письмо в подпапку (например, INBOX/Рассылки),
+        Thunderbird по умолчанию обновляет счётчик непрочитанных только при открытии
+        этой папки. Чтобы счётчик подпапок обновлялся автоматически, включите проверку
+        для нужных аккаунтов. Используется лёгкая команда IMAP STATUS — на сервер
+        нагрузки это почти не даёт.
+      </p>
+      <div class="notify-list" id="notifyList"></div>
+      <p class="section-hint" data-i18n="options_notify_hint">
+        Изменения вступают в силу при следующем получении почты.
+      </p>
+    </section>
+
     <!-- Раздел: О плагине -->
     <section id="section-about" class="section">
       <h2 data-i18n="options_section_about">О плагине</h2>

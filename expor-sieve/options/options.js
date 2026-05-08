@@ -566,12 +566,84 @@ async function bindBehaviorSection() {
   });
 }
 
+// ── Уведомления о подпапках (per-server check_all_folders_for_new) ───
+async function renderNotifySection() {
+  const list = document.getElementById('notifyList');
+  if (!list) return;
+  list.replaceChildren();
+
+  // Если Experiment API недоступен (сборка без подписи / старый TB) —
+  // прячем секцию целиком: фича принципиально требует chrome-доступа.
+  if (!isExperimentAvailable()) {
+    const sec = document.getElementById('section-notify');
+    if (sec) sec.hidden = true;
+    return;
+  }
+
+  const imapAccounts = (accounts || []).filter(a => a.type === 'imap' || !a.type);
+  if (imapAccounts.length === 0) {
+    list.append(el('p', { class: 'section-hint' },
+      browser.i18n.getMessage('options_notify_no_accounts') || 'Нет IMAP-аккаунтов.'));
+    return;
+  }
+
+  for (const a of imapAccounts) {
+    const row = el('label', { class: 'notify-row' });
+    const cb = el('input', { type: 'checkbox' });
+    cb.disabled = true;
+    const label = el('span', { class: 'notify-label' }, a.email || a.name || a.id);
+    const status = el('span', { class: 'notify-status' });
+
+    row.append(cb, label, status);
+    list.append(row);
+
+    // Текущее состояние pref — async; пока подгружается, чекбокс disabled.
+    let current;
+    try {
+      current = await send({ cmd: 'getCheckAllFolders', accountId: a.id });
+    } catch (_e) { current = { supported: false, enabled: null }; }
+
+    if (!current || !current.supported) {
+      cb.disabled = true;
+      status.textContent = browser.i18n.getMessage('options_notify_unsupported')
+        || '(не поддерживается этим аккаунтом)';
+      continue;
+    }
+    cb.checked = !!current.enabled;
+    cb.disabled = false;
+
+    cb.addEventListener('change', async () => {
+      const wanted = cb.checked;
+      cb.disabled = true;
+      status.textContent = '…';
+      try {
+        const r = await send({ cmd: 'setCheckAllFolders', accountId: a.id, enabled: wanted });
+        if (r && r.error) {
+          cb.checked = !wanted;
+          status.classList.add('err');
+          status.textContent = errorText(r.error);
+          return;
+        }
+        if (r && typeof r.enabled === 'boolean') {
+          cb.checked = r.enabled;
+        }
+        status.classList.remove('err');
+        status.textContent = browser.i18n.getMessage('options_notify_saved') || '✓';
+        setTimeout(() => { status.textContent = ''; }, 2000);
+      } finally {
+        cb.disabled = false;
+      }
+    });
+  }
+}
+
 async function init() {
   applyI18n();
   renderAbout();
   await loadAll();
   renderAccounts();
   await bindBehaviorSection();
+  await renderNotifySection();
 }
 
 init().catch((e) => {

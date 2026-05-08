@@ -528,6 +528,55 @@ export async function tryDeleteLocalFiltersFromTB(accountId, names) {
 }
 
 /**
+ * Experiment API `browser.exporSieveCredentials.getServerCheckAllFolders`.
+ * Returns `{ supported: boolean, enabled: boolean|null }` или null если API
+ * недоступно (старый TB / форк без подписи).
+ *
+ * @param {string} accountId
+ * @returns {Promise<{supported:boolean, enabled:boolean|null}|null>}
+ */
+export async function tryGetServerCheckAllFoldersFromTB(accountId) {
+  if (!accountId) return null;
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.getServerCheckAllFolders !== 'function') return null;
+    const r = await api.getServerCheckAllFolders(String(accountId));
+    if (!r || typeof r !== 'object') return { supported: false, enabled: null };
+    return {
+      supported: !!r.supported,
+      enabled: typeof r.enabled === 'boolean' ? r.enabled : null,
+    };
+  } catch (e) {
+    try { console.warn('[expor-sieve] tryGetServerCheckAllFoldersFromTB failed:', e?.message || e); } catch (_e) {}
+    return null;
+  }
+}
+
+/**
+ * Experiment API `browser.exporSieveCredentials.setServerCheckAllFolders`.
+ *
+ * @param {string} accountId
+ * @param {boolean} enabled
+ * @returns {Promise<{supported:boolean, enabled:boolean|null}|null>}
+ */
+export async function trySetServerCheckAllFoldersFromTB(accountId, enabled) {
+  if (!accountId) return null;
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.setServerCheckAllFolders !== 'function') return null;
+    const r = await api.setServerCheckAllFolders(String(accountId), !!enabled);
+    if (!r || typeof r !== 'object') return { supported: false, enabled: null };
+    return {
+      supported: !!r.supported,
+      enabled: typeof r.enabled === 'boolean' ? r.enabled : null,
+    };
+  } catch (e) {
+    try { console.warn('[expor-sieve] trySetServerCheckAllFoldersFromTB failed:', e?.message || e); } catch (_e) {}
+    return null;
+  }
+}
+
+/**
  * Сконструировать baseUrl middleware из IMAP-host'а аккаунта.
  *
  * Конвенция (см. TZ.md / архитектура): middleware деплоится на том же

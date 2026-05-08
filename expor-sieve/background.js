@@ -51,6 +51,8 @@ import {
   savePartialConfig,
   tryGetPasswordFromTB,
   tryGetServerInfoFromTB,
+  tryGetServerCheckAllFoldersFromTB,
+  trySetServerCheckAllFoldersFromTB,
   tryListLocalFiltersFromTB,
   tryDeleteLocalFiltersFromTB,
   effectiveBaseUrlSource,
@@ -901,11 +903,35 @@ browser.runtime.onMessage.addListener(async (msg) => {
               id: a.id,
               name: a.name,
               email,
+              type: a.type,
               identityEmails: (a.identities || []).map(i => i.email).filter(Boolean),
               hasConfig: !!cfg.password,
               isDefault: sel ? a.id === sel : false,
             };
           });
+      }
+
+      // ── Notifications: per-server check_all_folders_for_new ────────────
+      // Workaround к Bugzilla #1396495: после Sieve fileinto в подпапку
+      // unread-каунт не апдейтится, пока юзер её не откроет. Включение
+      // pref `mail.server.<key>.check_all_folders_for_new` заставляет
+      // Thunderbird на каждом get-mail тике слать STATUS на все
+      // подписанные папки — дёшево (одна команда из mailbox_list_index)
+      // и решает проблему.
+      case 'getCheckAllFolders': {
+        const accountId = await resolveAccountId(msg.accountId);
+        if (!accountId) return { supported: false, enabled: null };
+        const r = await tryGetServerCheckAllFoldersFromTB(accountId);
+        if (!r) return { supported: false, enabled: null };
+        return r;
+      }
+
+      case 'setCheckAllFolders': {
+        const accountId = await resolveAccountId(msg.accountId);
+        if (!accountId) return { error: { kind: 'no_config', message: 'no account' } };
+        const r = await trySetServerCheckAllFoldersFromTB(accountId, !!msg.enabled);
+        if (!r) return { error: { kind: 'no_experiment', message: 'set check_all_folders_for_new not available' } };
+        return r;
       }
 
       // ── Message meta (для wizard) ──────────────────────────────────────

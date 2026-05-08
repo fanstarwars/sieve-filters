@@ -616,6 +616,94 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
         },
 
         /**
+         * Read `mail.server.<serverKey>.check_all_folders_for_new` for the
+         * given accountId. See class-doc / schema for the broader story; in
+         * short: this is the per-server flag that, combined with the default
+         * `mail.imap.use_status_for_biff = true`, makes Thunderbird issue an
+         * IMAP STATUS for every subscribed folder on each get-mail tick.
+         * Without it Sieve fileinto'd mail in sub-folders never updates the
+         * unread badge until the user opens the folder.
+         *
+         * Returns { supported, enabled }. supported=false silently for
+         * non-IMAP / unknown account / missing serverKey.
+         *
+         * docs: https://searchfox.org/comm-central/source/mailnews/imap/src/nsImapIncomingServer.cpp
+         *       (NS_IMPL_SERVERPREF_BOOL CheckAllFoldersForNew)
+         */
+        async getServerCheckAllFolders(accountId) {
+          if (typeof accountId !== "string" || !accountId) {
+            return { supported: false, enabled: null };
+          }
+          const server = resolveIncomingServer(accountId);
+          if (!server) return { supported: false, enabled: null };
+
+          let serverType = "";
+          try { serverType = String(server.type || "").toLowerCase(); }
+          catch (_e) { /* ignore */ }
+          if (serverType !== "imap") return { supported: false, enabled: null };
+
+          let key = "";
+          try { key = String(server.serverKey || ""); }
+          catch (_e) { /* ignore */ }
+          if (!key) return { supported: false, enabled: null };
+
+          // server-level pref. defaults to false in Thunderbird.
+          let enabled = false;
+          try {
+            enabled = !!Services.prefs.getBoolPref(
+              `mail.server.${key}.check_all_folders_for_new`,
+              false,
+            );
+          } catch (e) {
+            logWarn("getBoolPref check_all_folders_for_new threw:", e?.message || e);
+          }
+          return { supported: true, enabled };
+        },
+
+        /**
+         * Write `mail.server.<serverKey>.check_all_folders_for_new` for the
+         * given accountId. Returns { supported, enabled } reflecting the
+         * value we actually persisted (echoes input on success).
+         *
+         * Notes for the caller:
+         *   - The change takes effect on the *next* get-mail tick — Thunderbird
+         *     does not re-evaluate this pref mid-session for folders that were
+         *     already fetched.
+         *   - Folders must be SUBSCRIBED (default for newly-discovered IMAP
+         *     folders, but a paranoid IMAP namespace might not auto-subscribe)
+         *     for STATUS to be issued.
+         */
+        async setServerCheckAllFolders(accountId, enabled) {
+          if (typeof accountId !== "string" || !accountId) {
+            return { supported: false, enabled: null };
+          }
+          const server = resolveIncomingServer(accountId);
+          if (!server) return { supported: false, enabled: null };
+
+          let serverType = "";
+          try { serverType = String(server.type || "").toLowerCase(); }
+          catch (_e) { /* ignore */ }
+          if (serverType !== "imap") return { supported: false, enabled: null };
+
+          let key = "";
+          try { key = String(server.serverKey || ""); }
+          catch (_e) { /* ignore */ }
+          if (!key) return { supported: false, enabled: null };
+
+          const target = !!enabled;
+          try {
+            Services.prefs.setBoolPref(
+              `mail.server.${key}.check_all_folders_for_new`,
+              target,
+            );
+          } catch (e) {
+            logWarn("setBoolPref check_all_folders_for_new threw:", e?.message || e);
+            return { supported: true, enabled: null };
+          }
+          return { supported: true, enabled: target };
+        },
+
+        /**
          * Enumerate local TB filters for the account and project them into
          * a JSON-safe array of TBFilter objects. See class-doc above for
          * format and references.
