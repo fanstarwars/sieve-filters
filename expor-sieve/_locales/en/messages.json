@@ -158,6 +158,7 @@
   "options_about_version":     { "message": "Version:" },
   "options_about_repo":        { "message": "Repository:" },
   "options_about_deploy":      { "message": "Documentation:" },
+  "options_about_releases":    { "message": "Releases:" },
   "options_about_contact":     { "message": "Contact:" },
   "options_about_license":     { "message": "License:" },
   "options_about_password_warning": {

@@ -158,6 +158,7 @@
   "options_about_version":     { "message": "Версия:" },
   "options_about_repo":        { "message": "Репозиторий:" },
   "options_about_deploy":      { "message": "Документация:" },
+  "options_about_releases":    { "message": "Релизы:" },
   "options_about_contact":     { "message": "Контакт:" },
   "options_about_license":     { "message": "Лицензия:" },
   "options_about_password_warning": {
