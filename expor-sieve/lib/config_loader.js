@@ -577,6 +577,53 @@ export async function trySetServerCheckAllFoldersFromTB(accountId, enabled) {
 }
 
 /**
+ * Experiment API `browser.exporSieveCredentials.listCheckNewFolders`.
+ * Возвращает массив { path, name, checkNew, specialUse[], isInbox, isVirtual,
+ * isSubscribed } или null если API недоступно.
+ *
+ * @param {string} accountId
+ * @returns {Promise<Array<object>|null>}
+ */
+export async function tryListCheckNewFoldersFromTB(accountId) {
+  if (!accountId) return null;
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.listCheckNewFolders !== 'function') return null;
+    const r = await api.listCheckNewFolders(String(accountId));
+    if (!Array.isArray(r)) return [];
+    return r;
+  } catch (e) {
+    try { console.warn('[expor-sieve] tryListCheckNewFoldersFromTB failed:', e?.message || e); } catch (_e) {}
+    return null;
+  }
+}
+
+/**
+ * Experiment API `browser.exporSieveCredentials.setFolderCheckNew`.
+ *
+ * @param {string} accountId
+ * @param {string} path     — server-relative path с leading '/' (как MailFolder.path)
+ * @param {boolean} enabled
+ * @returns {Promise<{supported:boolean, enabled:boolean|null}|null>}
+ */
+export async function trySetFolderCheckNewFromTB(accountId, path, enabled) {
+  if (!accountId || !path) return null;
+  try {
+    const api = (typeof browser !== 'undefined') ? browser.exporSieveCredentials : null;
+    if (!api || typeof api.setFolderCheckNew !== 'function') return null;
+    const r = await api.setFolderCheckNew(String(accountId), String(path), !!enabled);
+    if (!r || typeof r !== 'object') return { supported: false, enabled: null };
+    return {
+      supported: !!r.supported,
+      enabled: typeof r.enabled === 'boolean' ? r.enabled : null,
+    };
+  } catch (e) {
+    try { console.warn('[expor-sieve] trySetFolderCheckNewFromTB failed:', e?.message || e); } catch (_e) {}
+    return null;
+  }
+}
+
+/**
  * Сконструировать baseUrl middleware из IMAP-host'а аккаунта.
  *
  * Конвенция (см. TZ.md / архитектура): middleware деплоится на том же

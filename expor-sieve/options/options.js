@@ -566,14 +566,22 @@ async function bindBehaviorSection() {
   });
 }
 
-// ── Уведомления о подпапках (per-server check_all_folders_for_new) ───
+// ── Уведомления о подпапках ──────────────────────────────────────────
+// Два уровня контроля (Этап 1 и Этап 2):
+//   * Per-server `mail.server.<key>.check_all_folders_for_new` — общий
+//     toggle «проверять все подпапки этого аккаунта». При on перекрывает
+//     пер-папочные настройки: TB всё равно ходит STATUS по всем папкам.
+//   * Per-folder `nsMsgFolderFlags.CheckNew` — точечный контроль для
+//     отдельных папок (включая Junk). Имеет смысл когда per-server toggle
+//     выключен; иначе индивидуальные галки disabled.
+
+const i18n = (k, fallback) => browser.i18n.getMessage(k) || fallback;
+
 async function renderNotifySection() {
   const list = document.getElementById('notifyList');
   if (!list) return;
   list.replaceChildren();
 
-  // Если Experiment API недоступен (сборка без подписи / старый TB) —
-  // прячем секцию целиком: фича принципиально требует chrome-доступа.
   if (!isExperimentAvailable()) {
     const sec = document.getElementById('section-notify');
     if (sec) sec.hidden = true;
@@ -583,58 +591,200 @@ async function renderNotifySection() {
   const imapAccounts = (accounts || []).filter(a => a.type === 'imap' || !a.type);
   if (imapAccounts.length === 0) {
     list.append(el('p', { class: 'section-hint' },
-      browser.i18n.getMessage('options_notify_no_accounts') || 'Нет IMAP-аккаунтов.'));
+      i18n('options_notify_no_accounts', 'Нет IMAP-аккаунтов.')));
     return;
   }
 
   for (const a of imapAccounts) {
-    const row = el('label', { class: 'notify-row' });
-    const cb = el('input', { type: 'checkbox' });
-    cb.disabled = true;
-    const label = el('span', { class: 'notify-label' }, a.email || a.name || a.id);
-    const status = el('span', { class: 'notify-status' });
+    list.append(await renderAccountNotifyBlock(a));
+  }
+}
 
-    row.append(cb, label, status);
-    list.append(row);
+async function renderAccountNotifyBlock(account) {
+  const block = el('div', { class: 'notify-block' });
 
-    // Текущее состояние pref — async; пока подгружается, чекбокс disabled.
-    let current;
+  // Per-server toggle row.
+  const headerRow = el('label', { class: 'notify-row' });
+  const headerCb = el('input', { type: 'checkbox' });
+  headerCb.disabled = true;
+  const headerLabel = el('span', { class: 'notify-label' },
+    account.email || account.name || account.id);
+  const headerStatus = el('span', { class: 'notify-status' });
+  headerRow.append(headerCb, headerLabel, headerStatus);
+  block.append(headerRow);
+
+  // Per-folder details (initially collapsed).
+  const details = el('details', { class: 'notify-details' });
+  const summary = el('summary', { class: 'notify-summary' },
+    i18n('options_notify_per_folder_summary', 'Настроить отдельные папки'));
+  details.append(summary);
+  const inner = el('div', { class: 'notify-inner' });
+  details.append(inner);
+  block.append(details);
+
+  // Загружаем per-server pref.
+  let serverState;
+  try {
+    serverState = await send({ cmd: 'getCheckAllFolders', accountId: account.id });
+  } catch (_e) { serverState = { supported: false, enabled: null }; }
+
+  if (!serverState || !serverState.supported) {
+    headerCb.disabled = true;
+    headerStatus.textContent = i18n('options_notify_unsupported',
+      '(не поддерживается этим аккаунтом)');
+    details.hidden = true;
+    return block;
+  }
+
+  headerCb.checked = !!serverState.enabled;
+  headerCb.disabled = false;
+
+  // Lazy-render per-folder list только когда юзер раскрыл details.
+  let foldersLoaded = false;
+  const ensureFoldersLoaded = async () => {
+    if (foldersLoaded) return;
+    foldersLoaded = true;
+    inner.replaceChildren(el('p', { class: 'section-hint' },
+      i18n('options_notify_loading', 'Загрузка списка папок…')));
+    let folders = [];
     try {
-      current = await send({ cmd: 'getCheckAllFolders', accountId: a.id });
-    } catch (_e) { current = { supported: false, enabled: null }; }
+      folders = await send({ cmd: 'listCheckNewFolders', accountId: account.id }) || [];
+    } catch (_e) { folders = []; }
+    renderFolderList(inner, account.id, folders, () => headerCb.checked);
+  };
+  details.addEventListener('toggle', () => {
+    if (details.open) ensureFoldersLoaded();
+  });
 
-    if (!current || !current.supported) {
-      cb.disabled = true;
-      status.textContent = browser.i18n.getMessage('options_notify_unsupported')
-        || '(не поддерживается этим аккаунтом)';
-      continue;
+  // Headerstoggle меняет server-pref.
+  headerCb.addEventListener('change', async () => {
+    const wanted = headerCb.checked;
+    headerCb.disabled = true;
+    headerStatus.textContent = '…';
+    try {
+      const r = await send({ cmd: 'setCheckAllFolders', accountId: account.id, enabled: wanted });
+      if (r && r.error) {
+        headerCb.checked = !wanted;
+        headerStatus.classList.add('err');
+        headerStatus.textContent = errorText(r.error);
+        return;
+      }
+      if (r && typeof r.enabled === 'boolean') headerCb.checked = r.enabled;
+      headerStatus.classList.remove('err');
+      headerStatus.textContent = i18n('options_notify_saved', '✓');
+      setTimeout(() => { headerStatus.textContent = ''; }, 2000);
+      // При смене per-server toggle нужно пересчитать disabled-state у
+      // per-folder чекбоксов.
+      if (foldersLoaded) {
+        for (const cb of inner.querySelectorAll('input[type=checkbox][data-folder-path]')) {
+          cb.disabled = headerCb.checked;
+        }
+      }
+    } finally {
+      headerCb.disabled = false;
     }
-    cb.checked = !!current.enabled;
-    cb.disabled = false;
+  });
+
+  return block;
+}
+
+function renderFolderList(host, accountId, folders, isServerToggleOn) {
+  host.replaceChildren();
+  if (!folders.length) {
+    host.append(el('p', { class: 'section-hint' },
+      i18n('options_notify_no_folders', 'Папок не найдено.')));
+    return;
+  }
+
+  // Кнопки массовых операций.
+  const tools = el('div', { class: 'notify-tools' });
+  const btnAll = el('button', { type: 'button' },
+    i18n('options_notify_btn_all', 'Все'));
+  const btnInboxJunk = el('button', { type: 'button' },
+    i18n('options_notify_btn_inbox_junk', 'Только Inbox + Junk'));
+  const btnNone = el('button', { type: 'button' },
+    i18n('options_notify_btn_none', 'Сбросить'));
+  tools.append(btnAll, btnInboxJunk, btnNone);
+  host.append(tools);
+
+  if (isServerToggleOn()) {
+    host.append(el('p', { class: 'section-hint notify-overridden' },
+      i18n('options_notify_server_overrides',
+        'Включён общий тоггл выше — TB опрашивает все подпапки. Индивидуальные галки сейчас не влияют.')));
+  }
+
+  // Список папок.
+  const ul = el('ul', { class: 'notify-folders' });
+  for (const f of folders) {
+    const li = el('li', { class: 'notify-folder-row' });
+    const cb = el('input', { type: 'checkbox', 'data-folder-path': f.path });
+    cb.checked = !!f.checkNew;
+    cb.disabled = isServerToggleOn();
+    const name = el('span', { class: 'notify-folder-name' }, f.name || f.path);
+    const badges = el('span', { class: 'notify-badges' });
+    if (f.isInbox) {
+      badges.append(el('span', { class: 'notify-badge inbox' },
+        i18n('options_notify_badge_inbox', 'Входящие')));
+    }
+    if ((f.specialUse || []).includes('junk')) {
+      badges.append(el('span', { class: 'notify-badge junk' },
+        i18n('options_notify_badge_junk', 'Спам')));
+    }
+    if (f.isSubscribed === false) {
+      badges.append(el('span', { class: 'notify-badge warn', title:
+        i18n('options_notify_unsubscribed_hint',
+          'Папка не подписана — TB её не опрашивает. Подпишите через Edit → Subscribe.')
+      }, i18n('options_notify_badge_unsubscribed', 'не подписана')));
+    }
+    const status = el('span', { class: 'notify-status' });
 
     cb.addEventListener('change', async () => {
       const wanted = cb.checked;
       cb.disabled = true;
       status.textContent = '…';
       try {
-        const r = await send({ cmd: 'setCheckAllFolders', accountId: a.id, enabled: wanted });
+        const r = await send({
+          cmd: 'setFolderCheckNew',
+          accountId,
+          path: f.path,
+          enabled: wanted,
+        });
         if (r && r.error) {
           cb.checked = !wanted;
           status.classList.add('err');
           status.textContent = errorText(r.error);
           return;
         }
-        if (r && typeof r.enabled === 'boolean') {
-          cb.checked = r.enabled;
-        }
+        if (r && typeof r.enabled === 'boolean') cb.checked = r.enabled;
         status.classList.remove('err');
-        status.textContent = browser.i18n.getMessage('options_notify_saved') || '✓';
-        setTimeout(() => { status.textContent = ''; }, 2000);
+        status.textContent = i18n('options_notify_saved', '✓');
+        setTimeout(() => { status.textContent = ''; }, 1500);
       } finally {
-        cb.disabled = false;
+        cb.disabled = isServerToggleOn();
       }
     });
+
+    li.append(cb, name, badges, status);
+    ul.append(li);
   }
+  host.append(ul);
+
+  const bulkApply = async (predicate) => {
+    if (isServerToggleOn()) return;
+    for (const li of ul.children) {
+      const cb = li.querySelector('input[type=checkbox]');
+      const path = cb.getAttribute('data-folder-path');
+      const folder = folders.find(x => x.path === path);
+      const want = predicate(folder);
+      if (cb.checked === want) continue;
+      cb.checked = want;
+      cb.dispatchEvent(new Event('change'));
+    }
+  };
+  btnAll.addEventListener('click', () => bulkApply(() => true));
+  btnInboxJunk.addEventListener('click', () => bulkApply(f =>
+    f.isInbox || (f.specialUse || []).includes('junk')));
+  btnNone.addEventListener('click', () => bulkApply(() => false));
 }
 
 async function init() {

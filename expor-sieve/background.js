@@ -53,6 +53,8 @@ import {
   tryGetServerInfoFromTB,
   tryGetServerCheckAllFoldersFromTB,
   trySetServerCheckAllFoldersFromTB,
+  tryListCheckNewFoldersFromTB,
+  trySetFolderCheckNewFromTB,
   tryListLocalFiltersFromTB,
   tryDeleteLocalFiltersFromTB,
   effectiveBaseUrlSource,
@@ -931,6 +933,22 @@ browser.runtime.onMessage.addListener(async (msg) => {
         if (!accountId) return { error: { kind: 'no_config', message: 'no account' } };
         const r = await trySetServerCheckAllFoldersFromTB(accountId, !!msg.enabled);
         if (!r) return { error: { kind: 'no_experiment', message: 'set check_all_folders_for_new not available' } };
+        return r;
+      }
+
+      // Per-folder CheckNew flag — точечный контроль (Этап 2).
+      case 'listCheckNewFolders': {
+        const accountId = await resolveAccountId(msg.accountId);
+        if (!accountId) return [];
+        const r = await tryListCheckNewFoldersFromTB(accountId);
+        return Array.isArray(r) ? r : [];
+      }
+
+      case 'setFolderCheckNew': {
+        const accountId = await resolveAccountId(msg.accountId);
+        if (!accountId) return { error: { kind: 'no_config', message: 'no account' } };
+        const r = await trySetFolderCheckNewFromTB(accountId, String(msg.path || ''), !!msg.enabled);
+        if (!r) return { error: { kind: 'no_experiment', message: 'set CheckNew flag not available' } };
         return r;
       }
 

@@ -12,12 +12,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   tryGetServerCheckAllFoldersFromTB,
   trySetServerCheckAllFoldersFromTB,
+  tryListCheckNewFoldersFromTB,
+  trySetFolderCheckNewFromTB,
 } from '../lib/config_loader.js';
 
-function stubBrowser({ get, set } = {}) {
+function stubBrowser({ get, set, listFolders, setFolder } = {}) {
   const ns = {};
   if (typeof get === 'function') ns.getServerCheckAllFolders = vi.fn(get);
   if (typeof set === 'function') ns.setServerCheckAllFolders = vi.fn(set);
+  if (typeof listFolders === 'function') ns.listCheckNewFolders = vi.fn(listFolders);
+  if (typeof setFolder === 'function') ns.setFolderCheckNew = vi.fn(setFolder);
   vi.stubGlobal('browser', { exporSieveCredentials: ns });
   return ns;
 }
@@ -103,5 +107,70 @@ describe('trySetServerCheckAllFoldersFromTB', () => {
   it('returns null when experiment throws', async () => {
     stubBrowser({ set: async () => { throw new Error('boom'); } });
     expect(await trySetServerCheckAllFoldersFromTB('a-1', true)).toBeNull();
+  });
+});
+
+describe('tryListCheckNewFoldersFromTB', () => {
+  it('returns null when accountId is missing', async () => {
+    expect(await tryListCheckNewFoldersFromTB('')).toBeNull();
+  });
+
+  it('returns null when Experiment API is unavailable', async () => {
+    vi.stubGlobal('browser', {});
+    expect(await tryListCheckNewFoldersFromTB('a-1')).toBeNull();
+  });
+
+  it('forwards accountId and returns list', async () => {
+    const sample = [
+      { path: '/INBOX', name: 'INBOX', checkNew: false, specialUse: ['inbox'], isInbox: true, isVirtual: false, isSubscribed: true },
+      { path: '/INBOX/Junk', name: 'Junk', checkNew: false, specialUse: ['junk'], isInbox: false, isVirtual: false, isSubscribed: true },
+    ];
+    const ns = stubBrowser({ listFolders: async () => sample });
+    expect(await tryListCheckNewFoldersFromTB('a-1')).toEqual(sample);
+    expect(ns.listCheckNewFolders).toHaveBeenCalledWith('a-1');
+  });
+
+  it('returns [] when experiment returns non-array', async () => {
+    stubBrowser({ listFolders: async () => 'oops' });
+    expect(await tryListCheckNewFoldersFromTB('a-1')).toEqual([]);
+  });
+
+  it('returns null when experiment throws', async () => {
+    stubBrowser({ listFolders: async () => { throw new Error('boom'); } });
+    expect(await tryListCheckNewFoldersFromTB('a-1')).toBeNull();
+  });
+});
+
+describe('trySetFolderCheckNewFromTB', () => {
+  it('returns null when accountId or path is missing', async () => {
+    expect(await trySetFolderCheckNewFromTB('', '/x', true)).toBeNull();
+    expect(await trySetFolderCheckNewFromTB('a', '', true)).toBeNull();
+  });
+
+  it('returns null when API unavailable', async () => {
+    vi.stubGlobal('browser', {});
+    expect(await trySetFolderCheckNewFromTB('a-1', '/INBOX/X', true)).toBeNull();
+  });
+
+  it('forwards args and normalises shape', async () => {
+    const ns = stubBrowser({
+      setFolder: async (id, p, en) => ({ supported: true, enabled: en }),
+    });
+    const r = await trySetFolderCheckNewFromTB('a-1', '/INBOX/X', 1);
+    expect(r).toEqual({ supported: true, enabled: true });
+    expect(ns.setFolderCheckNew).toHaveBeenCalledWith('a-1', '/INBOX/X', true);
+  });
+
+  it('coerces non-boolean enabled to null (defensive)', async () => {
+    stubBrowser({
+      setFolder: async () => ({ supported: true, enabled: 'oops' }),
+    });
+    expect(await trySetFolderCheckNewFromTB('a-1', '/x', false))
+      .toEqual({ supported: true, enabled: null });
+  });
+
+  it('returns null when experiment throws', async () => {
+    stubBrowser({ setFolder: async () => { throw new Error('boom'); } });
+    expect(await trySetFolderCheckNewFromTB('a-1', '/x', true)).toBeNull();
   });
 });

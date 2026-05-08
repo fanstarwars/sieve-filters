@@ -704,6 +704,160 @@ this.exporSieveCredentials = class extends ExtensionCommon.ExtensionAPI {
         },
 
         /**
+         * Walk all sub-folders of the IMAP account and return CheckNew-flag
+         * state + light metadata. See schema for the contract. The Options
+         * UI uses this to render the per-folder list under each account.
+         *
+         * Implementation notes:
+         *   - We obtain `path` as `folder.URI.substring(rootFolder.URI.length)`.
+         *     This matches what MailFolder.path returns from
+         *     browser.folders.query() for IMAP. See ExtensionAccounts.sys.mjs:
+         *     getFolderPath in comm-central.
+         *   - Virtual search folders (flag::Virtual) and the root server
+         *     folder are excluded.
+         *   - `isSubscribed` reflects msgFolder.subscribed where available
+         *     (IMAP only). Folders that aren't subscribed don't get STATUS
+         *     polls even with CheckNew set, so the UI should warn.
+         */
+        async listCheckNewFolders(accountId) {
+          if (typeof accountId !== "string" || !accountId) return [];
+          const server = resolveIncomingServer(accountId);
+          if (!server) return [];
+
+          let serverType = "";
+          try { serverType = String(server.type || "").toLowerCase(); }
+          catch (_e) { /* ignore */ }
+          if (serverType !== "imap") return [];
+
+          let root = null;
+          let rootURI = "";
+          try { root = server.rootFolder; }
+          catch (e) { logWarn("rootFolder threw:", e?.message || e); return []; }
+          if (!root) return [];
+          try { rootURI = String(root.URI || ""); }
+          catch (_e) { /* ignore */ }
+          if (!rootURI) return [];
+
+          const out = [];
+          const stack = [];
+          try {
+            const subs = root.subFolders;
+            if (subs) {
+              for (const f of subs) stack.push(f);
+            }
+          } catch (e) {
+            logWarn("root.subFolders threw:", e?.message || e);
+            return [];
+          }
+
+          while (stack.length) {
+            const f = stack.pop();
+            if (!f) continue;
+            let flags = 0;
+            try { flags = Number(f.flags || 0); } catch (_e) { /* ignore */ }
+            // Skip virtual search folders.
+            if (flags & Ci.nsMsgFolderFlags.Virtual) continue;
+
+            let uri = "";
+            try { uri = String(f.URI || ""); } catch (_e) { /* ignore */ }
+            const path = uri && uri.startsWith(rootURI)
+              ? uri.substring(rootURI.length)
+              : "";
+            if (!path) continue;
+
+            let name = "";
+            try { name = String(f.localizedName || f.name || ""); }
+            catch (_e) { /* ignore */ }
+
+            const checkNew = !!(flags & Ci.nsMsgFolderFlags.CheckNew);
+            const isInbox  = !!(flags & Ci.nsMsgFolderFlags.Inbox);
+            const isVirtual = !!(flags & Ci.nsMsgFolderFlags.Virtual); // always false here, kept for future
+            let subscribed = true;
+            try {
+              if (typeof f.subscribed === "boolean") subscribed = !!f.subscribed;
+            } catch (_e) { /* not all folder kinds expose this — assume true */ }
+
+            out.push({
+              path,
+              name,
+              checkNew,
+              specialUse: getSpecialUse(flags),
+              isInbox,
+              isVirtual,
+              isSubscribed: subscribed,
+            });
+
+            // Recurse into children.
+            try {
+              const subs = f.subFolders;
+              if (subs) for (const ch of subs) stack.push(ch);
+            } catch (_e) { /* ignore — leaf folder */ }
+          }
+
+          // Stable display order: parents before children (path-prefix order).
+          out.sort((a, b) => a.path.localeCompare(b.path));
+          return out;
+        },
+
+        /**
+         * Toggle nsMsgFolderFlags::CheckNew on a single folder.
+         *
+         * Resolve algorithm: build folder URI as `rootFolder.URI + path` (path
+         * comes from MailFolder.path with a leading '/' — same shape as
+         * `getFolderPath` returns in ExtensionAccounts.sys.mjs). Then
+         * `MailServices.folderLookup.getFolderForURL(uri)` to find the
+         * nsIMsgFolder. setFlag/clearFlag is a synchronous XPCOM call that
+         * persists into the folder cache and is honoured by the IMAP
+         * incoming-server biff loop on the next tick.
+         */
+        async setFolderCheckNew(accountId, path, enabled) {
+          if (typeof accountId !== "string" || !accountId) {
+            return { supported: false, enabled: null };
+          }
+          if (typeof path !== "string" || !path) {
+            return { supported: false, enabled: null };
+          }
+          const server = resolveIncomingServer(accountId);
+          if (!server) return { supported: false, enabled: null };
+
+          let serverType = "";
+          try { serverType = String(server.type || "").toLowerCase(); }
+          catch (_e) { /* ignore */ }
+          if (serverType !== "imap") return { supported: false, enabled: null };
+
+          let root = null;
+          try { root = server.rootFolder; }
+          catch (_e) { return { supported: false, enabled: null }; }
+          if (!root) return { supported: false, enabled: null };
+
+          let rootURI = "";
+          try { rootURI = String(root.URI || ""); }
+          catch (_e) { /* ignore */ }
+          if (!rootURI) return { supported: false, enabled: null };
+
+          const uri = rootURI + path;
+          let folder = null;
+          try {
+            if (MailServices && MailServices.folderLookup
+                && typeof MailServices.folderLookup.getFolderForURL === "function") {
+              folder = MailServices.folderLookup.getFolderForURL(uri);
+            }
+          } catch (e) {
+            logWarn("getFolderForURL(", uri, ") threw:", e?.message || e);
+          }
+          if (!folder) return { supported: false, enabled: null };
+
+          try {
+            if (enabled) folder.setFlag(Ci.nsMsgFolderFlags.CheckNew);
+            else         folder.clearFlag(Ci.nsMsgFolderFlags.CheckNew);
+          } catch (e) {
+            logWarn("setFlag CheckNew threw:", e?.message || e);
+            return { supported: true, enabled: null };
+          }
+          return { supported: true, enabled: !!enabled };
+        },
+
+        /**
          * Enumerate local TB filters for the account and project them into
          * a JSON-safe array of TBFilter objects. See class-doc above for
          * format and references.
