@@ -198,7 +198,15 @@ function buildAction(action, requires) {
       requires.add('imap4flags');
       return `addflag "\\\\Flagged";`;
     case 'redirect':
-      return `redirect ${quoteSieveString(action.address)};`;
+      // RFC 5228 §4.2: «redirect» отменяет implicit keep — без `:copy`
+      // письмо ТОЛЬКО уходит на адрес, локальной копии не остаётся.
+      // Это стандартное поведение Sieve и одновременно стандартное
+      // непонимание пользователей: «перенаправил → не вижу у себя».
+      // Используем `:copy` (RFC 3894) → пересылаем И оставляем копию
+      // в Inbox через implicit keep. Если кому-то нужно «уйди и забудь»
+      // — он явно сочетает с `discard` через отдельное правило.
+      requires.add('copy');
+      return `redirect :copy ${quoteSieveString(action.address)};`;
     case 'discard':
       return 'discard;';
     case 'trash':
@@ -598,8 +606,12 @@ function parseAction(stmt) {
     if (q.value === '\\Flagged') return { type: 'flag' };
     throw new Error(`Unknown flag: ${q.value}`);
   }
-  // redirect "addr"
-  m = trimmed.match(/^redirect\s+(.+)$/);
+  // redirect [:copy] "addr"
+  // Поддерживаем обе формы: старые правила (до 0.15.1) — без `:copy`,
+  // новые — с `:copy` (см. buildAction). Семантика action в Rule та же:
+  // type='redirect' + address. При сохранении мы всегда эмитим `:copy`,
+  // так что round-trip конвертирует старые правила к новой форме.
+  m = trimmed.match(/^redirect(?:\s+:copy)?\s+(.+)$/);
   if (m) {
     const q = readQuoted(m[1].trim(), 0);
     if (!q) throw new Error(`Bad redirect: ${stmt}`);

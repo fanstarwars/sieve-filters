@@ -64,7 +64,7 @@
   "act_discard":   { "message": "Discard" },
   "act_trash":     { "message": "Move to Trash" },
 
-  "warn_redirect": { "message": "Redirects are visible to the sender." },
+  "warn_redirect": { "message": "The message is forwarded to the address and a copy stays in your mailbox." },
   "warn_discard":  { "message": "The message will be deleted without saving and cannot be recovered." },
 
   "err_no_network": { "message": "No connection to the mail server. Check your internet connection." },

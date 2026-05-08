@@ -156,7 +156,7 @@
         ],
         "stopAfter": false
       },
-      "sieve": "# expor-sieve v1 managed\nif header :matches \"X-Spam-Flag\" \"YES*\" {\n  redirect \"spam@example.com\";\n}\n"
+      "sieve": "# expor-sieve v1 managed\nrequire [\"copy\"];\n\nif header :matches \"X-Spam-Flag\" \"YES*\" {\n  redirect :copy \"spam@example.com\";\n}\n"
     },
     {
       "name": "size-over-mb-copy",
