@@ -482,3 +482,116 @@ describe('RULE_MARKER backward-compat', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// tag-action (Sieve `addflag` с user-keywords '$labelN')
+// ---------------------------------------------------------------------------
+describe('SieveAdapter — tag action (single keyword)', () => {
+  const rule = {
+    matchAll: true,
+    conditions: [{ field: 'from', op: 'contains', value: '@news.example' }],
+    actions: [{ type: 'tag', keywords: ['$label1'] }],
+    stopAfter: false,
+  };
+
+  it('сериализует один keyword как строку (не list)', () => {
+    const sieve = ruleToSieve(rule);
+    expect(sieve).toContain('addflag "$label1";');
+    // single-form НЕ должен попасть в [..]
+    expect(sieve).not.toMatch(/addflag\s*\[/);
+  });
+
+  it('включает imap4flags в require', () => {
+    const sieve = ruleToSieve(rule);
+    expect(sieve).toMatch(/require\s+\[\s*"imap4flags"\s*\]/);
+  });
+
+  it('round-trip восстанавливает action.keywords', () => {
+    const sieve = ruleToSieve(rule);
+    const back = sieveToRule(sieve);
+    expect(back.actions).toEqual(rule.actions);
+  });
+});
+
+describe('SieveAdapter — tag action (multi keyword)', () => {
+  const rule = {
+    matchAll: true,
+    conditions: [{ field: 'subject', op: 'contains', value: 'invoice' }],
+    actions: [{ type: 'tag', keywords: ['$label1', '$label3', '$importantBiz'] }],
+    stopAfter: true,
+  };
+
+  it('сериализует несколько keywords как list', () => {
+    const sieve = ruleToSieve(rule);
+    expect(sieve).toContain('addflag ["$label1", "$label3", "$importantBiz"];');
+  });
+
+  it('round-trip восстанавливает порядок и состав keywords', () => {
+    const sieve = ruleToSieve(rule);
+    const back = sieveToRule(sieve);
+    expect(back.actions).toEqual(rule.actions);
+    expect(back.actions[0].keywords).toEqual(['$label1', '$label3', '$importantBiz']);
+  });
+});
+
+describe('SieveAdapter — tag вместе с другими actions', () => {
+  it('fileinto + tag + flag — round-trip', () => {
+    const rule = {
+      matchAll: true,
+      conditions: [{ field: 'from', op: 'contains', value: '@biz' }],
+      actions: [
+        { type: 'fileinto', folder: 'Biz' },
+        { type: 'tag', keywords: ['$label2'] },
+        { type: 'flag' },
+      ],
+      stopAfter: false,
+    };
+    const sieve = ruleToSieve(rule);
+    expect(sieve).toContain('fileinto "Biz";');
+    expect(sieve).toContain('addflag "$label2";');
+    expect(sieve).toContain('addflag "\\\\Flagged";');
+    const back = sieveToRule(sieve);
+    expect(back.actions).toEqual(rule.actions);
+  });
+
+  it('combined v2 — round-trip правила с tag-action', () => {
+    const rules = [{
+      id: 'r-tag',
+      name: 'tag-rule',
+      active: true,
+      matchAll: true,
+      conditions: [{ field: 'from', op: 'contains', value: '@x' }],
+      actions: [{ type: 'tag', keywords: ['$label4', '$label5'] }],
+      stopAfter: true,
+      order: 0,
+    }];
+    const out = rulesToCombinedSieve(rules);
+    expect(out).toContain('addflag ["$label4", "$label5"];');
+    expect(combinedSieveToRules(out)).toEqual(rules);
+  });
+});
+
+describe('SieveAdapter — tag-action: разделение system-flag и user-keyword при парсинге', () => {
+  // Single addflag с системным флагом по-прежнему даёт mark_read / flag.
+  it('addflag "\\\\Seen" → mark_read (а не tag)', () => {
+    const rule = {
+      matchAll: true,
+      conditions: [{ field: 'from', op: 'contains', value: '@x' }],
+      actions: [{ type: 'mark_read' }],
+      stopAfter: false,
+    };
+    const back = sieveToRule(ruleToSieve(rule));
+    expect(back.actions).toEqual([{ type: 'mark_read' }]);
+  });
+
+  it('addflag "\\\\Flagged" → flag (а не tag)', () => {
+    const rule = {
+      matchAll: true,
+      conditions: [{ field: 'from', op: 'contains', value: '@x' }],
+      actions: [{ type: 'flag' }],
+      stopAfter: false,
+    };
+    const back = sieveToRule(ruleToSieve(rule));
+    expect(back.actions).toEqual([{ type: 'flag' }]);
+  });
+});
+

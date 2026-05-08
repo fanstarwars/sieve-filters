@@ -446,6 +446,37 @@ describe('applyActions', () => {
     );
     expect(mock.calls.del).toEqual([{ ids: [11], perm: false }]);
   });
+  it('tag → messages.update tags=[merged keywords] (без существующих)', async () => {
+    const r = await applyActions(
+      { actions: [{ type: 'tag', keywords: ['$label1', '$label3'] }] },
+      { id: 7 },
+      { folders: [] },
+    );
+    expect(r.applied).toEqual(['tag']);
+    expect(mock.calls.update).toEqual([{ id: 7, props: { tags: ['$label1', '$label3'] } }]);
+  });
+  it('tag → сливает с msg.tags, не теряя дубликатов и существующих', async () => {
+    await applyActions(
+      { actions: [{ type: 'tag', keywords: ['$label1', '$label3'] }] },
+      { id: 8, tags: ['$label1', '$other'] },
+      { folders: [] },
+    );
+    // существующее $label1 не должно быть продублировано;
+    // $other сохраняется; $label3 добавляется.
+    const last = mock.calls.update[mock.calls.update.length - 1];
+    expect(last.id).toBe(8);
+    expect(new Set(last.props.tags)).toEqual(new Set(['$label1', '$other', '$label3']));
+  });
+  it('tag с пустым keywords — не падает, applied записан', async () => {
+    const r = await applyActions(
+      { actions: [{ type: 'tag', keywords: [] }] },
+      { id: 9 },
+      { folders: [] },
+    );
+    expect(r.applied).toEqual(['tag']);
+    // Нет вызова update.
+    expect(mock.calls.update.length).toBe(0);
+  });
   it('redirect → skipped, не вызывает API', async () => {
     const r = await applyActions(
       { actions: [{ type: 'redirect', address: 'x@y' }] },

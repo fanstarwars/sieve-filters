@@ -15,9 +15,10 @@
 
 /**
  * @typedef {Object} Action
- * @property {'fileinto'|'copy'|'mark_read'|'flag'|'redirect'|'discard'|'trash'} type
+ * @property {'fileinto'|'copy'|'mark_read'|'flag'|'redirect'|'discard'|'trash'|'tag'} type
  * @property {string} [folder]                                  // для fileinto/copy
  * @property {string} [address]                                 // для redirect
+ * @property {string[]} [keywords]                              // для tag (IMAP keywords c префиксом '$')
  */
 
 /**
@@ -66,6 +67,19 @@ export function validateRule(rule) {
     }
     if (a.type === 'redirect' && !a.address) {
       return 'Для перенаправления укажите адрес';
+    }
+    if (a.type === 'tag') {
+      if (!Array.isArray(a.keywords) || a.keywords.length === 0) {
+        return 'Выберите хотя бы одну метку';
+      }
+      // Инвариант: каждый keyword начинается с '$' (IMAP user-keyword).
+      // Без '$' Pigeonhole воспримет это как fragment системного флага и
+      // может конфликтовать с Sieve `imap4flags` system-флагами.
+      for (const k of a.keywords) {
+        if (typeof k !== 'string' || !k.startsWith('$')) {
+          return 'Метка должна начинаться с символа $';
+        }
+      }
     }
   }
   return null;

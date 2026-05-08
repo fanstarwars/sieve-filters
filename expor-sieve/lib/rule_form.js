@@ -26,6 +26,7 @@
 import { validateRule } from './rule_model.js';
 import { toCanonical, toDisplay, findMatch } from './folder_path.js';
 import { filterUsableFolders } from './folder_filter.js';
+import { buildTagChips, listAvailableTags } from './tag_picker.js';
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 export const t = (key, ...subs) => {
@@ -90,6 +91,7 @@ export const ACTIONS = [
   { v: 'copy',      k: 'act_copy' },
   { v: 'mark_read', k: 'act_mark_read' },
   { v: 'flag',      k: 'act_flag' },
+  { v: 'tag',       k: 'act_tag' },
   { v: 'redirect',  k: 'act_redirect' },
   { v: 'discard',   k: 'act_discard' },
   { v: 'trash',     k: 'act_trash' },
@@ -123,6 +125,10 @@ export function describeAction(a) {
     case 'copy':      return t('desc_copy_folder', toDisplay(a.folder) || '?');
     case 'mark_read': return t('desc_mark_read');
     case 'flag':      return t('desc_flag');
+    case 'tag': {
+      const list = Array.isArray(a.keywords) ? a.keywords.join(', ') : '';
+      return t('desc_tag', list || '?');
+    }
     case 'redirect':  return t('desc_redirect', a.address || '?');
     case 'discard':   return t('desc_discard');
     case 'trash':     return t('desc_trash');
@@ -166,6 +172,22 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
   container.replaceChildren();
   if (prefs && prefs.hideSystemFolders) {
     folders = filterUsableFolders(folders, prefs);
+  }
+  // Список доступных TB-меток грузим лениво — нужен только если в правиле
+  // есть/появится action 'tag'. Кэшируем в local state, перерисовываем
+  // tag-chips после загрузки.
+  let availableTags = null;
+  let tagsLoaded = false;
+  let tagsLoadPromise = null;
+  function ensureTagsLoaded() {
+    if (tagsLoaded) return Promise.resolve(availableTags);
+    if (tagsLoadPromise) return tagsLoadPromise;
+    tagsLoadPromise = listAvailableTags().then((arr) => {
+      availableTags = arr;
+      tagsLoaded = true;
+      return arr;
+    });
+    return tagsLoadPromise;
   }
 
   // ── Имя ────────────────────────────────────────────────────────────────
@@ -329,9 +351,10 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
 
     const typeSel = makeSelect(ACTIONS, a.type, (v) => {
       a.type = v;
-      delete a.folder; delete a.address;
+      delete a.folder; delete a.address; delete a.keywords;
       if (v === 'fileinto' || v === 'copy') a.folder = toCanonical(folders[0]?.path);
       if (v === 'redirect') a.address = '';
+      if (v === 'tag') a.keywords = [];
       redrawActions();
     });
     row.append(typeSel);
@@ -380,6 +403,24 @@ export function renderRuleForm(container, rule, { folders = [], prefs = null, on
       row.append(el('div', { class: 'rf-warn warn' }, t('warn_redirect')));
     } else if (a.type === 'discard') {
       row.append(el('div', { class: 'rf-warn warn' }, t('warn_discard')));
+    } else if (a.type === 'tag') {
+      // Пока теги не подгрузились — placeholder; после ensureTagsLoaded
+      // перерисуем именно эту ячейку, не весь редактор.
+      if (!Array.isArray(a.keywords)) a.keywords = [];
+      const slot = el('div', { class: 'rf-tag-slot' });
+      const renderChips = () => {
+        slot.replaceChildren(buildTagChips({
+          selected: a.keywords,
+          allTags: availableTags || [],
+          onChange: (keys) => { a.keywords = keys; },
+          t,
+        }));
+      };
+      renderChips();
+      if (!tagsLoaded) {
+        ensureTagsLoaded().then(() => renderChips()).catch(() => {});
+      }
+      row.append(slot);
     }
 
     row.append(el('button', {

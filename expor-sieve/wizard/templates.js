@@ -202,11 +202,11 @@ export const TEMPLATES = [
 ];
 
 export function applyActionsToRule(rule, opts, folders) {
-  // opts: { fileinto: bool, folder: string, star: bool }
-  // tags / important / отдельный «flag» убраны: tags не нужны (юзер
-  // решил не возиться), important требует editheader-расширение и UI
-  // под priority 1-5, star и flag дублировали друг друга (оба ставили
-  // \\Flagged) — оставлен только star.
+  // opts: { fileinto: bool, folder: string, star: bool, tags: string[] }
+  // 0.16: tags вернулись (action 'tag' = Sieve `addflag` с user-keywords).
+  // important всё ещё убран — требует editheader, UI под priority 1-5,
+  // отдельная история. star и flag — это ОДНО действие (\\Flagged), tag —
+  // другое (user-keywords '$labelN').
   rule.actions = [];
   if (opts.fileinto) {
     const folder = toCanonical(opts.folder || folders?.[0]?.path);
@@ -214,6 +214,9 @@ export function applyActionsToRule(rule, opts, folders) {
   }
   if (opts.star) {
     rule.actions.push({ type: 'flag' });
+  }
+  if (Array.isArray(opts.tags) && opts.tags.length > 0) {
+    rule.actions.push({ type: 'tag', keywords: opts.tags.slice() });
   }
   if (rule.actions.length === 0) {
     rule.actions.push(defaultAction(folders));

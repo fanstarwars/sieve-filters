@@ -324,10 +324,31 @@ describe('mapLocalToRule — actions', () => {
     expect(mapLocalToRule(tb).rule.stopAfter).toBe(false);
   });
 
-  it('AddTag → skip + warning (не поддерживается)', () => {
+  it('AddTag со strValue=$labelN → tag action с этим keyword', () => {
+    const tb = tbFilter({
+      searchTerms: [term('Subject', 'Contains', 'a')],
+      actions: [action('AddTag', { strValue: '$label1' })],
+    });
+    const r = mapLocalToRule(tb);
+    expect(r.skipped).toBe(false);
+    expect(r.rule.actions).toEqual([{ type: 'tag', keywords: ['$label1'] }]);
+  });
+
+  it('AddTag со strValue без $ — нормализуем к $-keyword', () => {
     const tb = tbFilter({
       searchTerms: [term('Subject', 'Contains', 'a')],
       actions: [action('AddTag', { strValue: 'work' })],
+    });
+    const r = mapLocalToRule(tb);
+    expect(r.skipped).toBe(false);
+    expect(r.rule.actions[0].type).toBe('tag');
+    expect(r.rule.actions[0].keywords[0].startsWith('$')).toBe(true);
+  });
+
+  it('AddTag без strValue → skip + warning', () => {
+    const tb = tbFilter({
+      searchTerms: [term('Subject', 'Contains', 'a')],
+      actions: [action('AddTag')],
     });
     const r = mapLocalToRule(tb);
     expect(r.skipped).toBe(true);
@@ -414,9 +435,9 @@ describe('mapLocalToRule — rule-level', () => {
 
   it('фильтр без поддерживаемых действий → skipped:true', () => {
     const tb = tbFilter({
-      name: 'С тегами',
+      name: 'Reply only',
       searchTerms: [term('Subject', 'Contains', 'a')],
-      actions: [action('AddTag', { strValue: 'work' })],
+      actions: [action('Reply')],
     });
     const r = mapLocalToRule(tb);
     expect(r.skipped).toBe(true);
@@ -465,11 +486,11 @@ describe('mapLocalToRule — rule-level', () => {
     expect(r.warnings.length).toBeGreaterThan(0);
   });
 
-  it('mixed actions: один AddTag skip + один MarkRead ok → итог=1 action', () => {
+  it('mixed actions: один Reply skip + один MarkRead ok → итог=1 action', () => {
     const tb = tbFilter({
       searchTerms: [term('Subject', 'Contains', 'a')],
       actions: [
-        action('AddTag', { strValue: 'work' }),
+        action('Reply'),
         action('MarkRead'),
       ],
     });

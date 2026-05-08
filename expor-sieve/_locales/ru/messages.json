@@ -60,6 +60,7 @@
   "act_copy":      { "message": "Скопировать в папку" },
   "act_mark_read": { "message": "Пометить как прочитанное" },
   "act_flag":      { "message": "Пометить флагом" },
+  "act_tag":       { "message": "Добавить метки" },
   "act_redirect":  { "message": "Перенаправить на адрес" },
   "act_discard":   { "message": "Удалить" },
   "act_trash":     { "message": "Переместить в Корзину" },
@@ -95,6 +96,9 @@
   },
   "desc_mark_read": { "message": "пометить прочитанным" },
   "desc_flag": { "message": "пометить флагом" },
+  "desc_tag": { "message": "добавить метки: $TAGS$",
+    "placeholders": { "tags": { "content": "$1" } }
+  },
   "desc_redirect": { "message": "перенаправить на $ADDR$",
     "placeholders": { "addr": { "content": "$1" } }
   },
@@ -245,7 +249,11 @@
 
   "wiz_act_fileinto":  { "message": "Папка для сохранения" },
   "wiz_act_star":      { "message": "Пометить звёздочкой" },
+  "wiz_act_tags":      { "message": "Добавить метки" },
   "wiz_no_folders":    { "message": "— нет папок —" },
+
+  "tag_picker_no_tags":      { "message": "В Thunderbird нет меток. Введите ключи через запятую (каждый начинается с $):" },
+  "tag_picker_orphan_title": { "message": "Метка отсутствует в Thunderbird" },
 
   "wiz_next_open_editor":  { "message": "Открыть редактор правил" },
   "wiz_next_open_manager": { "message": "Открыть список фильтров" },

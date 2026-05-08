@@ -214,6 +214,87 @@
   overflow: auto;
 }
 
+/* ──────── Tag-chip picker (для action 'tag') ──────── */
+/* Компактная "row of chips" с цветной точкой слева. Используется и в
+ * editor.js (внутри .ed-action-line), и в lib/rule_form.js (.rf-tag-slot),
+ * и в wizard (.wiz-tag-slot). */
+.tag-picker { display: block; }
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg, #1d1d1f);
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.4;
+  height: 22px;
+}
+.tag-chip:hover:not(:disabled) {
+  background: var(--hover, #e8e8ed);
+}
+.tag-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--chip-color, #888);
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, .15);
+}
+.tag-chip.is-selected {
+  background: var(--chip-color, #888);
+  color: #fff;
+  border-color: var(--chip-color, #888);
+}
+.tag-chip.is-selected .tag-chip-dot {
+  background: rgba(255, 255, 255, .9);
+  border-color: rgba(0, 0, 0, .25);
+}
+.tag-chip.is-selected .tag-chip-label::after {
+  content: " \2713";
+  font-weight: 700;
+}
+.tag-chip.is-orphan .tag-chip-dot-orphan {
+  background: var(--fg-muted, #888);
+  border-style: dashed;
+}
+.tag-chip.is-orphan {
+  font-style: italic;
+}
+.tag-picker-hint {
+  font-size: 12px;
+  color: var(--fg-muted, #6e6e73);
+  margin-bottom: 4px;
+}
+.tag-picker-fallback {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--border, #d2d2d7);
+  border-radius: 4px;
+  background: var(--bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+/* В action-line у tag-action чипы занимают «ячейку значения» — стандартный
+ * grid 180px / 1fr / 28 / 28. */
+.ed-action-line .ed-tag-slot,
+.ed-action-line .rf-tag-slot {
+  min-width: 0;
+}
+
 /* ──────── Account badge (multi-account) ──────── */
 .ed-account-badge {
   font-size: 12px;

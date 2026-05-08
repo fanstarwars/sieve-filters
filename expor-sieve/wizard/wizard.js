@@ -10,6 +10,7 @@ import { openEditor } from '../editor/editor.js';
 import { toDisplay, toCanonical } from '../lib/folder_path.js';
 import { DEFAULTS as PREF_DEFAULTS } from '../lib/wizard_prefs.js';
 import { filterUsableFolders } from '../lib/folder_filter.js';
+import { buildTagChips, listAvailableTags } from '../lib/tag_picker.js';
 
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs = {}, ...children) {
@@ -65,6 +66,8 @@ const state = {
   selectedTemplateId: 'sender',
   prefs: { ...PREF_DEFAULTS, subjectPrefixes: PREF_DEFAULTS.subjectPrefixes.slice() },
   ownEmails: [],        // string[] (lowercase) — все мои identity emails
+  availableTags: [],    // MessageTag[] — берётся из browser.messages.tags.list()
+  selectedTags: [],     // string[] — keys выбранных меток (для action 'tag')
 };
 
 function templateOpts() {
@@ -222,6 +225,7 @@ function buildDraft() {
     fileinto: $('actFileinto').checked,
     folder: $('actFolderSel').value || toCanonical(state.visibleFolders[0]?.path),
     star: $('actStar').checked,
+    tags: ($('actTags') && $('actTags').checked) ? state.selectedTags.slice() : [],
   }, state.visibleFolders);
   return draft;
 }
@@ -422,6 +426,31 @@ async function bootstrap() {
   $('actFileinto').addEventListener('change', () => {
     $('actFolderSel').disabled = !$('actFileinto').checked;
   });
+
+  // ── Tag chips (опциональный action 'tag') ──────────────────────────────
+  // Загружаем список TB-меток (browser.messages.tags.list()) в фоне; пока
+  // юзер не включит чекбокс «Добавить метки», слот скрыт. При первом
+  // включении — рендерим chips. Если меток у юзера нет совсем (или API
+  // недоступно) — buildTagChips сам покажет fallback с текстовым input.
+  try {
+    state.availableTags = await listAvailableTags();
+  } catch { state.availableTags = []; }
+  const tagsChk = $('actTags');
+  const tagsSlot = $('actTagsSlot');
+  function renderTagChips() {
+    tagsSlot.replaceChildren(buildTagChips({
+      selected: state.selectedTags,
+      allTags: state.availableTags,
+      onChange: (keys) => { state.selectedTags = keys; },
+      t,
+    }));
+  }
+  if (tagsChk && tagsSlot) {
+    tagsChk.addEventListener('change', () => {
+      tagsSlot.hidden = !tagsChk.checked;
+      if (tagsChk.checked) renderTagChips();
+    });
+  }
   $('wizHelp').addEventListener('click', () => {
     const url = browser.runtime.getURL('README.md');
     browser.tabs?.create?.({ url }).catch(() => window.open(url));

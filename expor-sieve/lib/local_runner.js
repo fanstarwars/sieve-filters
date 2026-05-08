@@ -322,6 +322,25 @@ export async function applyActions(rule, msg, ctx) {
           applied.push('flag');
           break;
         }
+        case 'tag': {
+          // Локальный аналог серверного `addflag $labelN` — добавляем
+          // user-keywords к msg.tags. messages.update ожидает ПОЛНЫЙ массив
+          // tags (а не дельту), поэтому сливаем с текущими.
+          // docs: https://webextension-api.thunderbird.net/en/mv3/messages.html#update
+          const incoming = Array.isArray(a.keywords) ? a.keywords : [];
+          if (incoming.length === 0) {
+            // Defensive — validateRule отбивает пустой keywords, но если
+            // дошли — пропускаем без ошибки.
+            applied.push('tag');
+            break;
+          }
+          // msg.tags может быть undefined в старых TB; используем [] fallback.
+          const cur = Array.isArray(msg.tags) ? msg.tags : [];
+          const merged = Array.from(new Set([...cur, ...incoming]));
+          await browser.messages.update(msg.id, { tags: merged });
+          applied.push('tag');
+          break;
+        }
         case 'trash': {
           if (trashFolder) {
             await browser.messages.move([msg.id], trashFolder.id);

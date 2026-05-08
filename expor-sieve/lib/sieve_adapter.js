@@ -197,6 +197,22 @@ function buildAction(action, requires) {
     case 'flag':
       requires.add('imap4flags');
       return `addflag "\\\\Flagged";`;
+    case 'tag': {
+      // RFC 5232: `addflag` принимает любой IMAP-keyword. У TB user-tags
+      // имеют префикс '$' (например, '$label1') и НЕ требуют двойного
+      // backslash (это применяется только к system-флагам типа \\Seen).
+      requires.add('imap4flags');
+      const kws = Array.isArray(action.keywords) ? action.keywords : [];
+      if (kws.length === 0) {
+        // Defensive — validateRule не пропустит пустые keywords, но если
+        // дошли сюда — возвращаем невалидный stub, чтобы лог не молчал.
+        throw new Error('tag action requires non-empty keywords');
+      }
+      if (kws.length === 1) {
+        return `addflag ${quoteSieveString(kws[0])};`;
+      }
+      return `addflag ${quoteList(kws)};`;
+    }
     case 'redirect':
       // RFC 5228 §4.2: «redirect» отменяет implicit keep — без `:copy`
       // письмо ТОЛЬКО уходит на адрес, локальной копии не остаётся.
@@ -597,14 +613,35 @@ function parseAction(stmt) {
     if (q.value === 'Trash') return { type: 'trash' };
     return { type: 'fileinto', folder: toCanonical(q.value) };
   }
-  // addflag "\\Seen" / "\\Flagged"
+  // addflag "\\Seen" / "\\Flagged" / "$labelN" / [list]
+  // Decisions для list-формы и mixed flags:
+  //   * pure system: ["\\Seen"]              → mark_read (одиночное)
+  //   * pure system: ["\\Flagged"]           → flag       (одиночное)
+  //   * pure user-tags: ["$label1", ...]     → {type:'tag', keywords:[...]}
+  //   * mixed (system + user-tags) — не штатный путь нашего сериализатора,
+  //     но возможен из стороннего (или ручной правки) Sieve. Решение:
+  //     парсим как один tag-action со ВСЕМИ user-keywords (system-флаги
+  //     попадают в keywords как есть — '\\Seen'/'\\Flagged'), и валидация
+  //     потом отбреет это (требует префикс '$'). Альтернатива — split
+  //     в несколько action-ов — тяжелее, мы не пишем такие скрипты, не
+  //     боремся за edge-case → trim.
   m = trimmed.match(/^addflag\s+(.+)$/);
   if (m) {
-    const q = readQuoted(m[1].trim(), 0);
-    if (!q) throw new Error(`Bad addflag: ${stmt}`);
-    if (q.value === '\\Seen') return { type: 'mark_read' };
-    if (q.value === '\\Flagged') return { type: 'flag' };
-    throw new Error(`Unknown flag: ${q.value}`);
+    const rest = m[1].trim();
+    // Сначала пробуем list-форму [..., ...]
+    const list = readStringOrList(rest, 0);
+    if (!list) throw new Error(`Bad addflag: ${stmt}`);
+    const values = list.values;
+    if (values.length === 1) {
+      const v = values[0];
+      if (v === '\\Seen') return { type: 'mark_read' };
+      if (v === '\\Flagged') return { type: 'flag' };
+      // Custom IMAP-keyword (typically '$labelN' для TB-меток, но
+      // пропускаем любую non-system строку — пусть UI разберётся).
+      return { type: 'tag', keywords: [v] };
+    }
+    // Несколько keywords — всегда tag (см. комментарий выше).
+    return { type: 'tag', keywords: values.slice() };
   }
   // redirect [:copy] "addr"
   // Поддерживаем обе формы: старые правила (до 0.15.1) — без `:copy`,

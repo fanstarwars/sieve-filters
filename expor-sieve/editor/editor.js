@@ -13,6 +13,7 @@ import {
 import { validateRule } from '../lib/rule_model.js';
 import { toCanonical, toDisplay, findMatch } from '../lib/folder_path.js';
 import { filterUsableFolders } from '../lib/folder_filter.js';
+import { buildTagChips, listAvailableTags } from '../lib/tag_picker.js';
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -72,6 +73,22 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
 
   let dirty = false;
   const markDirty = () => { dirty = true; };
+
+  // Список TB-меток грузим лениво — нужен только если в правиле есть/появится
+  // action 'tag'. Кэшируем; повторно грузить не надо.
+  let availableTags = null;
+  let tagsLoaded = false;
+  let tagsLoadPromise = null;
+  function ensureTagsLoaded() {
+    if (tagsLoaded) return Promise.resolve(availableTags);
+    if (tagsLoadPromise) return tagsLoadPromise;
+    tagsLoadPromise = listAvailableTags().then((arr) => {
+      availableTags = arr;
+      tagsLoaded = true;
+      return arr;
+    });
+    return tagsLoadPromise;
+  }
 
   // ─── Account badge (для какого ящика правило) ───────────────
   if (email) {
@@ -245,9 +262,10 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
 
     const typeSel = makeSelect(ACTIONS, a.type, (v) => {
       a.type = v;
-      delete a.folder; delete a.address;
+      delete a.folder; delete a.address; delete a.keywords;
       if (v === 'fileinto' || v === 'copy') a.folder = toCanonical(folders[0]?.path);
       if (v === 'redirect') a.address = '';
+      if (v === 'tag') a.keywords = [];
       markDirty();
       redrawActions();
     });
@@ -291,6 +309,22 @@ export async function openEditor({ dialog, host, draft, folders = [], email = ''
       const inp = el('input', { type: 'email', placeholder: t('rule_email_placeholder'), value: a.address || '' });
       inp.addEventListener('input', () => { a.address = inp.value; markDirty(); });
       line.append(inp);
+    } else if (a.type === 'tag') {
+      if (!Array.isArray(a.keywords)) a.keywords = [];
+      const slot = el('div', { class: 'ed-tag-slot' });
+      const renderChips = () => {
+        slot.replaceChildren(buildTagChips({
+          selected: a.keywords,
+          allTags: availableTags || [],
+          onChange: (keys) => { a.keywords = keys; markDirty(); },
+          t,
+        }));
+      };
+      renderChips();
+      if (!tagsLoaded) {
+        ensureTagsLoaded().then(() => renderChips()).catch(() => {});
+      }
+      line.append(slot);
     } else {
       line.append(el('span'));
     }

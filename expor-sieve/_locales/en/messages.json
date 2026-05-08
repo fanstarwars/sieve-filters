@@ -60,6 +60,7 @@
   "act_copy":      { "message": "Copy to folder" },
   "act_mark_read": { "message": "Mark as read" },
   "act_flag":      { "message": "Flag the message" },
+  "act_tag":       { "message": "Add tags" },
   "act_redirect":  { "message": "Redirect to address" },
   "act_discard":   { "message": "Discard" },
   "act_trash":     { "message": "Move to Trash" },
@@ -95,6 +96,9 @@
   },
   "desc_mark_read": { "message": "mark as read" },
   "desc_flag": { "message": "flag" },
+  "desc_tag": { "message": "add tags: $TAGS$",
+    "placeholders": { "tags": { "content": "$1" } }
+  },
   "desc_redirect": { "message": "redirect to $ADDR$",
     "placeholders": { "addr": { "content": "$1" } }
   },
@@ -245,7 +249,11 @@
 
   "wiz_act_fileinto":  { "message": "Save into folder" },
   "wiz_act_star":      { "message": "Mark as starred" },
+  "wiz_act_tags":      { "message": "Add tags" },
   "wiz_no_folders":    { "message": "— no folders —" },
+
+  "tag_picker_no_tags":      { "message": "Thunderbird has no tags configured. Enter keys separated by comma (each must start with $):" },
+  "tag_picker_orphan_title": { "message": "Tag is missing in Thunderbird" },
 
   "wiz_next_open_editor":  { "message": "Open the rule editor" },
   "wiz_next_open_manager": { "message": "Open the filter list" },

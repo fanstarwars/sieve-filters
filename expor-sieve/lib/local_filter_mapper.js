@@ -190,9 +190,19 @@ function mapAction(action, ruleName) {
     }
     case 'StopExecution':
       return { stop: true };
+    case 'AddTag': {
+      // TB хранит keyword метки в strValue (например, '$label1'). Если он
+      // пуст — пропускаем (не из чего делать tag-action).
+      const raw = (action.strValue || '').trim();
+      if (!raw) {
+        return { skip: true, warning: `«${ruleName}»: действие «Добавить метку» без значения, пропущено.` };
+      }
+      // На всякий случай — приводим к виду '$keyword' (если пользователь
+      // в TB настроил «голую» метку без $-префикса, считаем custom user-tag).
+      const key = raw.startsWith('$') ? raw : ('$' + raw.replace(/[^A-Za-z0-9_]/g, '_'));
+      return { action: { type: 'tag', keywords: [key] } };
+    }
     // Не поддерживаем (возможно — в будущих версиях):
-    case 'AddTag':
-      return { skip: true, warning: `«${ruleName}»: действие «Добавить метку» пока не поддерживается, пропущено.` };
     case 'Reply':
       return { skip: true, warning: `«${ruleName}»: действие «Ответить шаблоном» не поддерживается, пропущено.` };
     case 'JunkScore':
