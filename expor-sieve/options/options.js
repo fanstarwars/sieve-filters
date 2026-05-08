@@ -5,16 +5,19 @@
 //   - Каждый IMAP/POP3-аккаунт рендерится карточкой со статусом одной строкой.
 //   - baseUrl автоматически выводится из IMAP-host'а аккаунта (Experiment API
 //     getServerInfo) → `https://${hostname}/sieve-proxy`.
-//   - Пароль автоматически берётся из Login Manager TB через Experiment.
-//   - Юзер вводит что-либо ТОЛЬКО когда автомеханика не сработала
-//     (нестандартный middleware-host, master password в TB, и т.п.) —
-//     раскрывая «▶ Дополнительно».
+//   - Пароль ВСЕГДА берётся из Login Manager TB через Experiment API
+//     (browser.exporSieveCredentials.getImapPassword). Никаких полей ввода
+//     пароля в UI плагина нет — пользователь сохраняет пароль в стандартном
+//     диалоге Account Settings TB, плагин его читает оттуда live на каждый
+//     запрос.
+//   - Юзер вводит что-либо ТОЛЬКО когда нужен per-account override URL
+//     (нестандартный middleware-host) — раскрывая «▶ Дополнительно».
 //
-// Состояния карточки:
-//   OK    — есть baseUrl AND есть password (storage или experiment).
-//   Warn  — есть baseUrl, password только experiment (или ничего, но
-//           experiment может выдать).
-//   Err   — нет baseUrl ИЛИ ни storage ни experiment не дали password.
+// Состояния карточки (v0.15.0+):
+//   OK    — есть baseUrl AND password успешно прочитан из TB Login Manager.
+//   Err   — нет baseUrl ИЛИ TB Login Manager не отдал пароль (master
+//           password залочен / пароль не сохранён в TB / Experiment API
+//           недоступен).
 
 import { t } from '../lib/rule_form.js';
 
@@ -125,7 +128,7 @@ async function loadAll() {
   // схема не успела апгрейднуться.
   try {
     const legacy = await browser.storage.local.get(['schema_version', 'mailbox']);
-    if (Number(legacy.schema_version) !== 2 && legacy.mailbox) {
+    if (Number(legacy.schema_version) !== 3 && legacy.mailbox) {
       state.migrationFailed = { mailbox: legacy.mailbox };
     } else {
       state.migrationFailed = null;
@@ -137,22 +140,15 @@ async function loadAll() {
 // Card helpers
 // ────────────────────────────────────────────────────────────────────────────
 function classifyStatus(st) {
-  // OK    — baseUrl И (storage|experiment). Password будет либо уже задан,
-  //         либо будет автоматически импортирован при первом обращении.
-  // WARN  — baseUrl есть, password только experiment (auto-import доступен,
-  //         но storage пусто) ИЛИ в storage есть password но baseUrl только
-  //         auto и Experiment показывает что есть. Стараемся подсветить
-  //         «нужен пароль» отдельно.
-  // ERR   — baseUrl=none ИЛИ password=none.
+  // OK   — baseUrl задан И TB Login Manager отдал пароль.
+  // ERR  — baseUrl=none ИЛИ TB Login Manager не отдал пароль.
   if (!st.baseUrl) return 'err';
-  if (st.passwordSource === 'storage') return 'ok';
-  if (st.passwordSource === 'experiment') return 'warn';
+  if (st.passwordSource === 'experiment') return 'ok';
   return 'err';
 }
 
 function badgeFor(level) {
   if (level === 'ok')  return el('span', { class: 'acc-badge ok'   }, '✓ ', t('options_status_ok'));
-  if (level === 'warn') return el('span', { class: 'acc-badge warn' }, '⚠ ', t('options_status_need_password'));
   return el('span', { class: 'acc-badge err' }, '⚙ ', t('options_status_need_setup'));
 }
 
@@ -168,7 +164,6 @@ function urlSourceTag(source) {
 
 function pwdSourceText(source) {
   switch (source) {
-    case 'storage':    return t('options_pwd_storage');
     case 'experiment': return t('options_pwd_experiment');
     default:           return t('options_pwd_none');
   }
@@ -244,8 +239,8 @@ function renderAccountCard(account) {
       await send({ cmd: 'testConnection', accountId: account.id });
       testStatus.classList.add('ok');
       testStatus.textContent = t('options_test_inline_ok');
-      // Перерендер: после успешного test, password мог автоматически
-      // импортироваться через background → status может стать 'storage'.
+      // Перерендер: на случай если что-то на стороне TB поменялось,
+      // освежаем passwordSource/baseUrlSource.
       await loadAll();
       renderAccounts();
     } catch (e) {
@@ -310,32 +305,6 @@ function renderAccountCard(account) {
     }
   });
 
-  const importBtn = el('button', { type: 'button' }, t('options_import_btn'));
-  if (!isExperimentAvailable()) importBtn.hidden = true;
-  importBtn.addEventListener('click', async () => {
-    testStatus.className = 'status'; testStatus.textContent = '…';
-    try {
-      const r = await send({ cmd: 'importPasswordFromTB', accountId: account.id });
-      if (!r.available) {
-        testStatus.classList.add('err');
-        testStatus.textContent = t('options_import_unavailable');
-        return;
-      }
-      if (!r.hasPassword) {
-        testStatus.classList.add('err');
-        testStatus.textContent = t('options_import_not_found');
-        return;
-      }
-      testStatus.classList.add('ok');
-      testStatus.textContent = t('options_import_ok');
-      await loadAll();
-      renderAccounts();
-    } catch (e) {
-      testStatus.classList.add('err');
-      testStatus.textContent = errorText(e);
-    }
-  });
-
   // Toggle advanced.
   const advWrap = el('div', { class: 'acc-advanced', hidden: true });
   const advToggle = el('button', { type: 'button', class: 'link' }, '▶ ', t('options_advanced'));
@@ -351,35 +320,30 @@ function renderAccountCard(account) {
     }
   });
 
-  // Кнопки в actions меняются в зависимости от уровня.
+  // Кнопки в actions.
   const actions = el('div', { class: 'acc-actions' });
-  if (level === 'ok' || level === 'warn') {
-    actions.append(advToggle, testBtn);
-    if (level === 'warn' && !importBtn.hidden) actions.append(importBtn);
-  } else {
-    // ERR: показываем «Импортировать» (если доступно) + «Указать вручную»
-    // (раскрывает advanced + фокус на password).
-    if (!importBtn.hidden) actions.append(importBtn);
-    const setManuallyBtn = el('button', { type: 'button', class: 'primary' },
-      t('options_set_manually_btn'));
-    setManuallyBtn.addEventListener('click', () => {
-      if (advWrap.hidden) {
-        advWrap.hidden = false;
-        advToggle.textContent = '';
-        advToggle.append(document.createTextNode('▼ ' + t('options_advanced_hide')));
-      }
-      const pwInp = advWrap.querySelector('input[type=password], input.pw-input');
-      if (pwInp) setTimeout(() => pwInp.focus(), 30);
-    });
-    actions.append(setManuallyBtn, advToggle, testBtn);
-  }
-  // Кнопка импорта фильтров — показываем для OK/Warn (когда есть конфиг
+  actions.append(advToggle, testBtn);
+  // Кнопка импорта фильтров — показываем только при OK (когда есть конфиг
   // подключения к middleware; иначе импортировать некуда).
-  if ((level === 'ok' || level === 'warn') && !importLocalBtn.hidden) {
+  if (level === 'ok' && !importLocalBtn.hidden) {
     actions.append(importLocalBtn);
   }
   actions.append(testStatus);
   card.append(actions);
+
+  // Если статус ERR из-за отсутствия пароля — показываем явную инструкцию,
+  // что делать. baseUrl ошибки рулятся через advanced/override.
+  if (level === 'err' && st.baseUrl && st.passwordSource === 'none') {
+    const apiOk = isExperimentAvailable();
+    const hint = el('div', { class: 'acc-hint err-hint' },
+      apiOk
+        ? (t('options_pwd_tb_unavailable_long')
+           || 'Откройте Account Settings Thunderbird → Server Settings, введите пароль и поставьте «Remember password». Если у вас задан мастер-пароль TB, разблокируйте его.')
+        : (t('options_pwd_experiment_unavailable')
+           || 'Эта версия Thunderbird не поддерживает чтение пароля из настроек (нет Experiment API). Обновите Thunderbird или используйте сборку с поддержкой Experiment API.')
+    );
+    card.append(hint);
+  }
 
   // Advanced section — рендерится сразу (но скрыт), чтобы фокус сразу работал.
   renderAdvanced(advWrap, account, st);
@@ -399,23 +363,6 @@ function renderAdvanced(advWrap, account, st) {
     placeholder: defaultUrl || t('options_field_baseurl_placeholder'),
     class: 'url-input',
   });
-  const pwInput = el('input', {
-    type: 'password',
-    autocomplete: 'current-password',
-    placeholder: t('options_field_password_placeholder')
-      || 'Введите пароль mailcow или app-password',
-    class: 'pw-input',
-  });
-  const showPwBtn = el('button', { type: 'button' }, t('options_apikey_show'));
-  showPwBtn.addEventListener('click', () => {
-    if (pwInput.type === 'password') {
-      pwInput.type = 'text';
-      showPwBtn.textContent = t('options_apikey_hide');
-    } else {
-      pwInput.type = 'password';
-      showPwBtn.textContent = t('options_apikey_show');
-    }
-  });
 
   // URL row.
   advWrap.append(
@@ -428,13 +375,12 @@ function renderAdvanced(advWrap, account, st) {
     advWrap.append(el('div', { class: 'acc-hint' }, hint));
   }
 
-  // Password row.
-  advWrap.append(
-    el('label', {}, t('options_pwd_override_label')),
-    el('div', { class: 'row' }, pwInput, showPwBtn),
-  );
+  // Подсказка про пароль — пароль больше не вводится здесь.
+  advWrap.append(el('div', { class: 'acc-hint' },
+    t('options_pwd_managed_by_tb')
+      || 'Пароль читается напрямую из настроек Thunderbird (Account Settings → Server Settings). В плагине пароль не сохраняется.'));
 
-  // Actions: save / reset / status.
+  // Actions: save / reset / status. Сохраняется только URL override.
   const advStatus = el('div', { class: 'adv-status' });
   const saveBtn = el('button', { type: 'button', class: 'primary' },
     t('options_save_override'));
@@ -444,15 +390,11 @@ function renderAdvanced(advWrap, account, st) {
   saveBtn.addEventListener('click', async () => {
     advStatus.className = 'adv-status'; advStatus.textContent = '';
     try {
-      const patch = {};
       const trimmedUrl = urlInput.value.trim();
       // Пустой URL → значит юзер хочет вернуть auto (resetOverride эффективно).
-      patch.baseUrl = trimmedUrl;
-      if (pwInput.value) patch.password = pwInput.value;
-      await send({ cmd: 'saveAccountConfig', accountId: account.id, ...patch });
+      await send({ cmd: 'saveAccountConfig', accountId: account.id, baseUrl: trimmedUrl });
       advStatus.classList.add('ok');
       advStatus.textContent = t('options_saved_ok');
-      pwInput.value = '';
       await loadAll();
       renderAccounts();
     } catch (e) {

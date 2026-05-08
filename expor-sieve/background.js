@@ -6,7 +6,7 @@
 //
 //   { cmd: 'getConfig' }                                      -> EffectiveConfig (для selectedAccountId)
 //   { cmd: 'getAccountConfig', accountId }                    -> { baseUrl, mailbox, hasPassword, source }
-//   { cmd: 'saveAccountConfig', accountId, baseUrl?, password? } -> { ok: true }
+//   { cmd: 'saveAccountConfig', accountId, baseUrl? }         -> { ok: true }
 //   { cmd: 'getActiveAccountId' }                             -> string|null
 //   { cmd: 'getSelectedAccountId' }                           -> string|null
 //   { cmd: 'setSelectedAccountId', accountId }                -> { ok: true }
@@ -83,33 +83,20 @@ async function getClientFor(accountId) {
   if (_clientCache.has(accountId)) return _clientCache.get(accountId);
 
   const promise = (async () => {
-    let cfg = await loadConfigFor(accountId);
+    // loadConfigFor — теперь делает live read пароля из TB Login Manager
+    // (см. lib/config_loader.js). Никаких саvе в storage мы не делаем.
+    const cfg = await loadConfigFor(accountId);
     if (!cfg.mailbox) {
       throw makeKindError('no_config', `mailbox not detected for accountId=${accountId}`);
     }
     if (!cfg.baseUrl) {
       throw makeKindError('no_config', `baseUrl not set for accountId=${accountId}`);
     }
-    // Lazy bootstrap: если пароль ещё не сохранён в storage — пробуем
-    // подсосать его из Login Manager TB через Experiment API. Юзеру не
-    // придётся вводить пароль вручную в options-странице, если TB его
-    // уже знает (типичный кейс после стандартной IMAP-настройки).
     if (!cfg.password) {
-      const fromTB = await tryGetPasswordFromTB(accountId);
-      if (fromTB) {
-        try {
-          await saveAccountConfig(accountId, { password: fromTB });
-          cfg = await loadConfigFor(accountId);
-        } catch (e) {
-          // Сохранить не вышло — всё равно используем подсосанный пароль для
-          // текущего запроса, но лог об этом оставляем.
-          console.warn('[expor-sieve] saveAccountConfig after TB-import failed:', e?.message || e);
-          cfg = { ...cfg, password: fromTB };
-        }
-      }
-    }
-    if (!cfg.password) {
-      const err = makeKindError('no_password', 'password not set');
+      // Возможные причины: master password TB залочен; пароль не сохранён
+      // в TB Login Manager; Experiment API недоступен (старый TB / форк).
+      // UI покажет инструкцию открыть Account Settings или разлочить мастер.
+      const err = makeKindError('no_password', 'password not available from Thunderbird Login Manager');
       err.accountId = accountId;
       err.mailbox = cfg.mailbox;
       throw err;
@@ -123,7 +110,8 @@ async function getClientFor(accountId) {
   })();
   _clientCache.set(accountId, promise);
   // Если promise зареджектился — сбрасываем кэш, чтобы следующий вызов
-  // прошёл заново (особенно важно для no_password — после save password'а).
+  // прошёл заново (особенно важно для no_password — после того, как юзер
+  // сохранил пароль в TB Account Settings и нажал «Повторить»).
   promise.catch(() => { _clientCache.delete(accountId); });
   return promise;
 }
@@ -613,23 +601,20 @@ browser.runtime.onMessage.addListener(async (msg) => {
         // Read-only structured status for the options page.
         // Returns:
         //   { accountId, mailbox, baseUrl, baseUrlSource, hasPassword,
-        //     passwordSource: 'storage'|'experiment'|'none' }
+        //     passwordSource: 'experiment'|'none' }
         // Не делает testConnection — только локальный snapshot.
+        // v0.15.0+: passwordSource больше не имеет значения 'storage' —
+        // пароль никогда не сохраняется в storage.local. Либо TB Login
+        // Manager его отдаёт ('experiment'), либо нет ('none' — master
+        // password залочен / пароль не сохранён в TB / Experiment-API
+        // недоступен).
         const accountId = msg.accountId;
         if (!accountId) return { error: { kind: 'validation', message: 'accountId required' } };
         const cfg = await loadConfigFor(accountId);
         const src = await effectiveBaseUrlSource(accountId);
-        let passwordSource = 'none';
-        if (cfg.password) {
-          passwordSource = 'storage';
-        } else {
-          // Не сохраняем — только узнаём, может ли Experiment отдать пароль.
-          // Это «дёшево»: один XPCOM lookup без UI.
-          try {
-            const pw = await tryGetPasswordFromTB(accountId);
-            passwordSource = pw ? 'experiment' : 'none';
-          } catch { passwordSource = 'none'; }
-        }
+        // cfg.password — это live read из TB через tryGetPasswordFromTB
+        // (см. loadConfigFor). passwordSource напрямую из этого:
+        const passwordSource = cfg.password ? 'experiment' : 'none';
         return {
           accountId,
           mailbox: cfg.mailbox,
@@ -659,34 +644,41 @@ browser.runtime.onMessage.addListener(async (msg) => {
       }
 
       case 'saveAccountConfig': {
+        // v0.15.0+: password больше не принимается. Только baseUrl override.
         const accountId = msg.accountId;
         if (!accountId) return { error: { kind: 'validation', message: 'accountId required' } };
         const patch = {};
         if (msg.baseUrl !== undefined) patch.baseUrl = msg.baseUrl;
-        if (msg.password !== undefined) patch.password = msg.password;
+        // msg.password игнорируем намеренно — see config_loader.saveAccountConfig.
         await saveAccountConfig(accountId, patch);
         resetClient(accountId);
         return { ok: true };
       }
 
-      case 'importPasswordFromTB': {
-        // Триггерится кнопкой «Импортировать из настроек Thunderbird» в
-        // options-странице. Возвращает { ok, hasPassword, available }
-        //   available=false → Experiment API вообще не задеплоен (старый TB);
-        //   ok=false        → API доступен, но пароля в Login Manager нет.
+      case 'checkPasswordAvailable': {
+        // Read-only probe: спрашиваем TB Login Manager «есть ли пароль для
+        // этого аккаунта?». Используется UI Manager'а (lazy-auth panel)
+        // после клика «Повторить» — если пароль теперь есть, перезагружаем
+        // правила; если нет, оставляем подсказку с инструкцией.
+        //
+        // Возвращает { available, hasPassword }
+        //   available=false → Experiment API не задеплоен (старый TB / форк).
+        //   hasPassword=true → пароль доступен из TB Login Manager.
+        //   hasPassword=false → master password залочен или пароль не
+        //                       сохранён в TB Account Settings.
         const accountId = msg.accountId;
         if (!accountId) return { error: { kind: 'validation', message: 'accountId required' } };
-        const apiAvailable = !!(typeof browser !== 'undefined' && browser.exporSieveCredentials);
+        const apiAvailable = !!(typeof browser !== 'undefined' && browser.exporSieveCredentials
+                                && typeof browser.exporSieveCredentials.getImapPassword === 'function');
         if (!apiAvailable) {
-          return { ok: false, available: false, hasPassword: false };
+          return { available: false, hasPassword: false };
         }
         const pw = await tryGetPasswordFromTB(accountId);
-        if (!pw) {
-          return { ok: false, available: true, hasPassword: false };
-        }
-        await saveAccountConfig(accountId, { password: pw });
+        // Сбрасываем клиент per-account, чтобы при следующем listRules
+        // создался свежий ProxyClient с новым паролем (если пароль в TB
+        // изменился между вызовами).
         resetClient(accountId);
-        return { ok: true, available: true, hasPassword: true };
+        return { available: true, hasPassword: !!pw };
       }
 
       case 'setSelectedAccountId': {

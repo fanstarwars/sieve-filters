@@ -130,12 +130,6 @@
   "options_nav_about":         { "message": "О плагине" },
   "options_field_baseurl":     { "message": "Адрес сервера middleware" },
   "options_field_baseurl_placeholder": { "message": "https://mail.example.com/sieve-proxy" },
-  "options_field_password":    { "message": "Пароль почтового ящика" },
-  "options_field_password_placeholder": { "message": "Введите ваш пароль mailcow или app-password" },
-  "options_password_hint": {
-    "message": "Пароль хранится локально в этом профиле Thunderbird, никуда не передаётся кроме указанного сервера. Используется для аутентификации в middleware."
-  },
-  "options_partial_config_hint": { "message": "Адрес сервера задан администратором. Введите ваш пароль для подключения." },
   "options_field_mailbox":     { "message": "Ящик" },
   "options_field_mailbox_placeholder": { "message": "user@example.com" },
   "options_apikey_show":       { "message": "Показать" },
@@ -161,9 +155,6 @@
   "options_about_releases":    { "message": "Релизы:" },
   "options_about_contact":     { "message": "Контакт:" },
   "options_about_license":     { "message": "Лицензия:" },
-  "options_about_password_warning": {
-    "message": "Пароль почтового ящика хранится в storage.local в открытом виде. Используйте app-password при возможности."
-  },
 
   "tb_new":              { "message": "Создать новый фильтр" },
   "tb_new_short":        { "message": "Создать" },
@@ -271,20 +262,20 @@
 
   "ctx_create_filter_from_message": { "message": "Создать фильтр из этого письма…" },
 
-  "mgr_lazy_auth_title": { "message": "Введите пароль" },
-  "mgr_lazy_auth_info":  { "message": "Для ящика {0} ещё не задан пароль для доступа к серверу фильтров.",
+  "mgr_lazy_auth_title": { "message": "Нужен пароль почты" },
+  "mgr_lazy_auth_info":  { "message": "Для ящика {0} плагин не смог получить пароль из настроек Thunderbird.",
     "placeholders": { "0": { "content": "$1" } }
   },
+  "mgr_lazy_auth_step_open":   { "message": "Откройте Account Settings Thunderbird (меню → Edit → Account Settings)." },
+  "mgr_lazy_auth_step_save":   { "message": "В Server Settings выбранного ящика введите пароль и поставьте «Remember password»." },
+  "mgr_lazy_auth_step_master": { "message": "Если у вас задан мастер-пароль Thunderbird, разблокируйте его (диалог появится при следующем чтении почты)." },
+  "mgr_lazy_auth_still_missing": { "message": "Пароль всё ещё недоступен. Проверьте, что он сохранён в Account Settings и мастер-пароль разблокирован." },
+  "mgr_lazy_auth_switch":      { "message": "Сменить ящик" },
   "mgr_no_imap_accounts": { "message": "В Thunderbird нет настроенных IMAP/POP3 аккаунтов. Сначала добавьте аккаунт почты в Thunderbird." },
-  "err_no_password":      { "message": "Введите пароль для этого ящика." },
-  "err_password_required":{ "message": "Пароль обязателен." },
+  "err_no_password":      { "message": "Сохраните пароль ящика в Account Settings Thunderbird — плагин прочитает его оттуда." },
   "options_no_accounts":  { "message": "В Thunderbird не найдено IMAP/POP3 аккаунтов." },
   "options_baseurl_global": { "message": "Адрес middleware (по умолчанию)" },
-  "options_password_set":   { "message": "задан" },
-  "options_import_password_tb": { "message": "Импортировать из Thunderbird" },
-  "options_import_ok":      { "message": "Пароль импортирован из настроек Thunderbird." },
-  "options_import_not_found": { "message": "Пароль не найден в настройках Thunderbird (введите вручную)." },
-  "options_import_unavailable": { "message": "Импорт недоступен — версия Thunderbird не поддерживает Experiment API плагина." },
+  "options_import_unavailable": { "message": "Чтение пароля из Thunderbird недоступно — версия Thunderbird не поддерживает Experiment API плагина." },
   "options_migration_failed": {
     "message": "Старая конфигурация для {0} не была мигрирована автоматически (аккаунт не найден в Thunderbird). Введите пароль вручную.",
     "placeholders": { "0": { "content": "$1" } }
@@ -325,7 +316,6 @@
   "options_beh_new_position_end":   { "message": "В конец списка (по умолчанию)" },
   "options_beh_new_position_top":   { "message": "В начало списка" },
   "options_status_ok":          { "message": "Готово" },
-  "options_status_need_password": { "message": "Нужен пароль" },
   "options_status_need_setup":  { "message": "Требуется настройка" },
   "options_url_auto":           { "message": "авто" },
   "options_url_managed":        { "message": "политика" },
@@ -334,14 +324,14 @@
   "options_url_none":           { "message": "не определён" },
   "options_url_label":          { "message": "Сервер:" },
   "options_pwd_label":          { "message": "Пароль:" },
-  "options_pwd_storage":        { "message": "сохранён в плагине" },
-  "options_pwd_experiment":     { "message": "подтянется из Thunderbird" },
-  "options_pwd_none":           { "message": "не задан" },
+  "options_pwd_experiment":     { "message": "читается из настроек Thunderbird" },
+  "options_pwd_none":           { "message": "недоступен из Thunderbird" },
+  "options_pwd_managed_by_tb":  { "message": "Пароль читается напрямую из настроек Thunderbird (Account Settings → Server Settings) при каждом запросе. В плагине пароль не сохраняется." },
+  "options_pwd_tb_unavailable_long": { "message": "Откройте Account Settings Thunderbird → Server Settings, введите пароль и поставьте «Remember password». Если у вас задан мастер-пароль Thunderbird, разблокируйте его." },
+  "options_pwd_experiment_unavailable": { "message": "Эта версия Thunderbird не поддерживает чтение пароля из настроек (нет Experiment API). Обновите Thunderbird или используйте сборку с поддержкой Experiment API." },
   "options_advanced":           { "message": "Дополнительно" },
   "options_advanced_hide":      { "message": "Скрыть дополнительно" },
-  "options_import_btn":         { "message": "Импортировать из Thunderbird" },
   "options_test_btn":           { "message": "Проверить соединение" },
-  "options_set_manually_btn":   { "message": "Указать вручную" },
   "options_save_override":      { "message": "Сохранить override" },
   "options_reset_override":     { "message": "Сбросить override" },
   "options_url_default_hint":   {
@@ -349,10 +339,6 @@
     "placeholders": { "host": { "content": "$1" } }
   },
   "options_url_override_label": { "message": "URL middleware (override)" },
-  "options_pwd_override_label": { "message": "Пароль (override)" },
-  "options_pwd_storage_set":    { "message": "Пароль сохранён в плагине." },
-  "options_pwd_experiment_avail": { "message": "Пароль будет автоматически подтянут из настроек Thunderbird при первом обращении." },
-  "options_pwd_none_long":      { "message": "Пароль не сохранён и не доступен из Thunderbird. Введите вручную или импортируйте." },
   "options_url_auto_long":      {
     "message": "Адрес middleware определён автоматически по IMAP-хосту: $URL$",
     "placeholders": { "url": { "content": "$1" } }
@@ -370,9 +356,6 @@
     "placeholders": { "url": { "content": "$1" } }
   },
   "options_url_none_long":      { "message": "Адрес middleware не определён. Укажите его в разделе «Дополнительно»." },
-  "options_about_storage_warning": {
-    "message": "Пароль почтового ящика хранится в storage.local в открытом виде. Используйте app-password при возможности."
-  },
   "options_test_inline_ok":     { "message": "Соединение установлено." },
   "options_test_inline_fail":   {
     "message": "Ошибка: $MSG$",

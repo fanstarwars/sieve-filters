@@ -1,4 +1,9 @@
-// Tests for lib/config_loader.js — multi-account v2 storage.
+// Tests for lib/config_loader.js — multi-account v3 storage.
+//
+// v0.15.0+: пароль НЕ хранится в storage.local. password в EffectiveConfig
+// — это live read из Experiment API (browser.exporSieveCredentials.getImapPassword).
+// Поэтому source=manual/managed возможен только когда Experiment API задеплоен
+// и в нём есть пароль.
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
@@ -108,8 +113,8 @@ const ACC2 = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('migration v1 → v2', () => {
-  it('legacy {baseUrl, mailbox, password} с найденным аккаунтом → переносится в accounts[id]', async () => {
+describe('migration to v3', () => {
+  it('v1 legacy {baseUrl, mailbox, password}: baseUrl override переносится, password ИГНОРИРУЕТСЯ', async () => {
     setupBrowser({
       local: {
         baseUrl: 'https://x/sieve-proxy',
@@ -120,20 +125,20 @@ describe('migration v1 → v2', () => {
     });
     const m = await loadModule();
     const all = await m.loadAllConfig();
-    expect(all.schema_version).toBe(2);
+    expect(all.schema_version).toBe(3);
+    // password НЕ переносится в storage — будет читаться из TB Login Manager.
     expect(all.accounts['account-1']).toEqual({
       baseUrl: 'https://x/sieve-proxy',
-      password: 'secret',
     });
     expect(all.selectedAccountId).toBe('account-1');
     expect(all.baseUrl_global).toBe('https://x/sieve-proxy');
-    // legacy keys удалены
+    // legacy keys удалены (включая password!).
     expect(fakeLocal.data.mailbox).toBeUndefined();
     expect(fakeLocal.data.password).toBeUndefined();
     expect(fakeLocal.data.baseUrl).toBeUndefined();
   });
 
-  it('legacy без match по mailbox → не удаляет legacy, ставит migrationFailed', async () => {
+  it('v1 без match по mailbox → не удаляет legacy, ставит migrationFailed', async () => {
     setupBrowser({
       local: {
         baseUrl: 'https://x/sieve-proxy',
@@ -145,16 +150,39 @@ describe('migration v1 → v2', () => {
     const m = await loadModule();
     const all = await m.loadAllConfig();
     expect(all.migrationFailed).toEqual({ mailbox: 'unknown@nowhere.tld' });
-    // legacy осталось
+    // legacy осталось — повторим попытку при следующем запуске.
     expect(fakeLocal.data.mailbox).toBe('unknown@nowhere.tld');
     expect(fakeLocal.data.password).toBe('secret');
   });
 
-  it('schema_version === 2 → миграция не запускается', async () => {
+  it('v2 → v3: чистит password-поля во всех accounts.<id>', async () => {
     setupBrowser({
       local: {
         schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+        accounts: {
+          'account-1': { baseUrl: 'https://x/p', password: 'old-pw-1' },
+          'account-2': { password: 'old-pw-2' },
+        },
+        selectedAccountId: 'account-1',
+        baseUrl_global: 'https://g/p',
+      },
+      accounts: [ACC1, ACC2],
+    });
+    const m = await loadModule();
+    const all = await m.loadAllConfig();
+    expect(all.schema_version).toBe(3);
+    expect(all.accounts['account-1']).toEqual({ baseUrl: 'https://x/p' });
+    expect(all.accounts['account-2']).toEqual({});
+    // password-полей в storage больше нет.
+    expect(fakeLocal.data.accounts['account-1'].password).toBeUndefined();
+    expect(fakeLocal.data.accounts['account-2'].password).toBeUndefined();
+  });
+
+  it('schema_version === 3 → миграция не запускается', async () => {
+    setupBrowser({
+      local: {
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://x/p' } },
         selectedAccountId: 'account-1',
         baseUrl_global: 'https://x/sieve-proxy',
       },
@@ -162,7 +190,7 @@ describe('migration v1 → v2', () => {
     });
     const m = await loadModule();
     const all = await m.loadAllConfig();
-    expect(all.accounts['account-1']).toEqual({ password: 'p' });
+    expect(all.accounts['account-1']).toEqual({ baseUrl: 'https://x/p' });
     expect(all.selectedAccountId).toBe('account-1');
   });
 
@@ -181,20 +209,19 @@ describe('migration v1 → v2', () => {
     expect(a1).toEqual(a2);
     expect(fakeLocal.data.accounts['account-1']).toEqual({
       baseUrl: 'https://x/sieve-proxy',
-      password: 'secret',
     });
   });
 
-  it('пустой storage → schema_version = 2, accounts пустой', async () => {
+  it('пустой storage → schema_version = 3, accounts пустой', async () => {
     setupBrowser({ accounts: [ACC1] });
     const m = await loadModule();
     const all = await m.loadAllConfig();
-    expect(all.schema_version).toBe(2);
+    expect(all.schema_version).toBe(3);
     expect(all.accounts).toEqual({});
     expect(all.selectedAccountId).toBeNull();
   });
 
-  it('legacy с managed.baseUrl → baseUrl_global = managed.baseUrl', async () => {
+  it('v1 legacy с managed.baseUrl → baseUrl_global = managed.baseUrl', async () => {
     setupBrowser({
       managed: { baseUrl: 'https://policy.example/sieve-proxy' },
       local: {
@@ -213,14 +240,15 @@ describe('migration v1 → v2', () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('loadConfigFor', () => {
-  it('source=managed: managed.baseUrl + password в storage', async () => {
+  it('source=managed: managed.baseUrl + password из TB Login Manager', async () => {
     setupBrowser({
       managed: { baseUrl: 'https://m/sieve-proxy' },
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'pw' } },
+        schema_version: 3,
+        accounts: { 'account-1': {} },
       },
       accounts: [ACC1],
+      experiment: 'pw',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -233,13 +261,14 @@ describe('loadConfigFor', () => {
     });
   });
 
-  it('source=manual: per-account override baseUrl + password', async () => {
+  it('source=manual: per-account override baseUrl + password из TB Login Manager', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { baseUrl: 'https://override/p', password: 'pw' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://override/p' } },
       },
       accounts: [ACC1],
+      experiment: 'pw',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -250,11 +279,12 @@ describe('loadConfigFor', () => {
   it('source=manual: baseUrl_global без managed', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'pw' } },
+        schema_version: 3,
+        accounts: { 'account-1': {} },
         baseUrl_global: 'https://global/p',
       },
       accounts: [ACC1],
+      experiment: 'pw',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -262,11 +292,25 @@ describe('loadConfigFor', () => {
     expect(c.baseUrl).toBe('https://global/p');
   });
 
-  it('source=partial: baseUrl есть, password нет', async () => {
+  it('source=partial: baseUrl есть, TB Login Manager пароль не дал', async () => {
     setupBrowser({
       managed: { baseUrl: 'https://m/p' },
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
+      experiment: null,  // API доступен, но пароля нет
+    });
+    const m = await loadModule();
+    const c = await m.loadConfigFor('account-1');
+    expect(c.source).toBe('partial');
+    expect(c.password).toBe('');
+  });
+
+  it('source=partial: baseUrl есть, Experiment API отсутствует', async () => {
+    setupBrowser({
+      managed: { baseUrl: 'https://m/p' },
+      local: { schema_version: 3, accounts: {} },
+      accounts: [ACC1],
+      // experiment не передан → API не задеплоен (старый TB).
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -276,7 +320,7 @@ describe('loadConfigFor', () => {
 
   it('source=none: ничего нет', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -284,10 +328,26 @@ describe('loadConfigFor', () => {
     expect(c.source).toBe('none');
   });
 
+  it('password — это live read из TB Login Manager на каждый вызов', async () => {
+    let calls = 0;
+    setupBrowser({
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
+      accounts: [ACC1],
+      experiment: async () => { calls++; return `pw-${calls}`; },
+    });
+    const m = await loadModule();
+    const c1 = await m.loadConfigFor('account-1');
+    const c2 = await m.loadConfigFor('account-1');
+    expect(c1.password).toBe('pw-1');
+    expect(c2.password).toBe('pw-2');
+    expect(calls).toBe(2);
+  });
+
   it('mailbox derived from accounts.get(id).identities[0].email', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: { 'account-2': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-2': {} } },
       accounts: [ACC1, ACC2],
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-2');
@@ -297,57 +357,78 @@ describe('loadConfigFor', () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('saveAccountConfig', () => {
-  it('добавляет accountId с baseUrl + password', async () => {
+  it('сохраняет baseUrl override; password в storage не пишется', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
     });
     const m = await loadModule();
+    // password в патче — игнорируется (защита от регрессий).
     await m.saveAccountConfig('account-1', {
       baseUrl: 'https://x/p', password: 'pw',
     });
     expect(fakeLocal.data.accounts['account-1']).toEqual({
-      baseUrl: 'https://x/p', password: 'pw',
+      baseUrl: 'https://x/p',
     });
+    expect(fakeLocal.data.accounts['account-1'].password).toBeUndefined();
   });
 
-  it('идемпотентность: повторный save с теми же данными не ломает', async () => {
+  it('идемпотентность: повторный save с тем же baseUrl не ломает', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
     });
     const m = await loadModule();
-    await m.saveAccountConfig('account-1', { password: 'pw' });
-    await m.saveAccountConfig('account-1', { password: 'pw' });
-    expect(fakeLocal.data.accounts['account-1']).toEqual({ password: 'pw' });
+    await m.saveAccountConfig('account-1', { baseUrl: 'https://x/p' });
+    await m.saveAccountConfig('account-1', { baseUrl: 'https://x/p' });
+    expect(fakeLocal.data.accounts['account-1']).toEqual({ baseUrl: 'https://x/p' });
   });
 
   it('partial patch: baseUrl undefined не трогает существующий', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { baseUrl: 'https://prev', password: 'old' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://prev' } },
       },
       accounts: [ACC1],
     });
     const m = await loadModule();
-    await m.saveAccountConfig('account-1', { password: 'new' });
+    await m.saveAccountConfig('account-1', {});  // пустой patch
     expect(fakeLocal.data.accounts['account-1']).toEqual({
-      baseUrl: 'https://prev', password: 'new',
+      baseUrl: 'https://prev',
     });
   });
 
   it('пустой baseUrl удаляет override', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { baseUrl: 'https://prev', password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://prev' } },
       },
       accounts: [ACC1],
     });
     const m = await loadModule();
     await m.saveAccountConfig('account-1', { baseUrl: '' });
     expect(fakeLocal.data.accounts['account-1'].baseUrl).toBeUndefined();
+  });
+
+  it('очищает legacy password-поле, если оно почему-то осталось в записи', async () => {
+    // Скажем, миграция была на конкретного юзера, потом мы подсунули новый
+    // accountId — saveAccountConfig для него должен по-прежнему гарантировать
+    // отсутствие password-поля.
+    setupBrowser({
+      local: {
+        schema_version: 3,
+        // искусственно: запись с password (теоретически невозможно после
+        // migrate, но защищаемся от bugs).
+        accounts: { 'account-1': { baseUrl: 'https://x/p', password: 'leak' } },
+      },
+      accounts: [ACC1],
+    });
+    const m = await loadModule();
+    await m.saveAccountConfig('account-1', { baseUrl: 'https://y/p' });
+    expect(fakeLocal.data.accounts['account-1']).toEqual({ baseUrl: 'https://y/p' });
+    expect(fakeLocal.data.accounts['account-1'].password).toBeUndefined();
   });
 });
 
@@ -356,8 +437,8 @@ describe('deleteAccountConfig', () => {
   it('удаляет конфиг + сбрасывает selectedAccountId если он совпадал', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'p' }, 'account-2': { password: 'q' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://a' }, 'account-2': { baseUrl: 'https://b' } },
         selectedAccountId: 'account-1',
       },
       accounts: [ACC1, ACC2],
@@ -365,21 +446,21 @@ describe('deleteAccountConfig', () => {
     const m = await loadModule();
     await m.deleteAccountConfig('account-1');
     expect(fakeLocal.data.accounts['account-1']).toBeUndefined();
-    expect(fakeLocal.data.accounts['account-2']).toEqual({ password: 'q' });
+    expect(fakeLocal.data.accounts['account-2']).toEqual({ baseUrl: 'https://b' });
     expect(fakeLocal.data.selectedAccountId).toBeNull();
   });
 
   it('idempotent: удаление несуществующего accountId — no-op', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://a' } },
       },
       accounts: [ACC1],
     });
     const m = await loadModule();
     await m.deleteAccountConfig('nonexistent');
-    expect(fakeLocal.data.accounts['account-1']).toEqual({ password: 'p' });
+    expect(fakeLocal.data.accounts['account-1']).toEqual({ baseUrl: 'https://a' });
   });
 });
 
@@ -387,7 +468,7 @@ describe('deleteAccountConfig', () => {
 describe('selectedAccountId', () => {
   it('set/get round-trip', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: { 'account-1': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -401,11 +482,12 @@ describe('loadConfig (compat wrapper)', () => {
   it('возвращает конфиг для selectedAccountId', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-2': { baseUrl: 'https://x', password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-2': { baseUrl: 'https://x' } },
         selectedAccountId: 'account-2',
       },
       accounts: [ACC1, ACC2],
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfig();
@@ -416,11 +498,12 @@ describe('loadConfig (compat wrapper)', () => {
   it('fallback на первый IMAP-аккаунт если selectedAccountId не задан', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': {} },
         baseUrl_global: 'https://g/p',
       },
       accounts: [ACC1, ACC2],
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfig();
@@ -604,25 +687,27 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
 
   it('storage пуст, managed нет, есть serverInfo → baseUrl автовыводится', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: { 'account-1': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
       accounts: [ACC1],
       serverInfo: SERVER,
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
     expect(c.baseUrl).toBe('https://mail.example.com/sieve-proxy');
-    // password есть → source = 'manual'
+    // password есть из Experiment → source = 'manual'
     expect(c.source).toBe('manual');
   });
 
   it('per-account override побеждает auto-derive', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { baseUrl: 'https://custom/x', password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://custom/x' } },
       },
       accounts: [ACC1],
       serverInfo: SERVER,
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -632,9 +717,10 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
   it('managed побеждает auto-derive', async () => {
     setupBrowser({
       managed: { baseUrl: 'https://policy/x' },
-      local: { schema_version: 2, accounts: { 'account-1': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
       accounts: [ACC1],
       serverInfo: SERVER,
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -645,23 +731,25 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
   it('baseUrl_global побеждает auto-derive', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': {} },
         baseUrl_global: 'https://global/x',
       },
       accounts: [ACC1],
       serverInfo: SERVER,
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
     expect(c.baseUrl).toBe('https://global/x');
   });
 
-  it('source=partial когда auto-derive дал URL, но password нет', async () => {
+  it('source=partial когда auto-derive дал URL, но TB Login Manager не отдал пароль', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
       serverInfo: SERVER,
+      experiment: null,
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');
@@ -671,7 +759,7 @@ describe('loadConfigFor with auto-derive (lazy baseUrl)', () => {
 
   it('source=none если ни storage, ни managed, ни Experiment не дали URL', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -690,8 +778,8 @@ describe('effectiveBaseUrlSource', () => {
 
   it('override: per-account baseUrl', async () => {
     setupBrowser({
-      local: { schema_version: 2,
-        accounts: { 'account-1': { baseUrl: 'https://override/x', password: 'p' } } },
+      local: { schema_version: 3,
+        accounts: { 'account-1': { baseUrl: 'https://override/x' } } },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -702,7 +790,7 @@ describe('effectiveBaseUrlSource', () => {
   it('managed: Enterprise Policy baseUrl', async () => {
     setupBrowser({
       managed: { baseUrl: 'https://policy/x' },
-      local: { schema_version: 2, accounts: { 'account-1': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -712,8 +800,8 @@ describe('effectiveBaseUrlSource', () => {
 
   it('global: legacy baseUrl_global default', async () => {
     setupBrowser({
-      local: { schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+      local: { schema_version: 3,
+        accounts: { 'account-1': {} },
         baseUrl_global: 'https://global/x' },
       accounts: [ACC1],
     });
@@ -724,7 +812,7 @@ describe('effectiveBaseUrlSource', () => {
 
   it('auto: derived from IMAP host via Experiment', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: { 'account-1': { password: 'p' } } },
+      local: { schema_version: 3, accounts: { 'account-1': {} } },
       accounts: [ACC1],
       serverInfo: SERVER,
     });
@@ -735,7 +823,7 @@ describe('effectiveBaseUrlSource', () => {
 
   it('none: ничего не доступно', async () => {
     setupBrowser({
-      local: { schema_version: 2, accounts: {} },
+      local: { schema_version: 3, accounts: {} },
       accounts: [ACC1],
     });
     const m = await loadModule();
@@ -757,7 +845,7 @@ describe('effectiveBaseUrlSource', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('migration не ломается с новыми полями (schema_version=2 + serverInfo)', () => {
+describe('migration не ломается с новыми полями (schema_version=3 + serverInfo)', () => {
   it('legacy migrate + serverInfo доступен → сохранённый baseUrl всё равно побеждает auto', async () => {
     setupBrowser({
       local: {
@@ -768,23 +856,27 @@ describe('migration не ломается с новыми полями (schema_v
       accounts: [ACC1],
       serverInfo: { hostname: 'mail.example.com', port: 993, type: 'imap',
                     username: 'a', hostnameOrIp: 'mail.example.com' },
+      experiment: 'pw-from-tb',
     });
     const m = await loadModule();
     // Миграция перенесёт baseUrl→accounts[id].baseUrl как override.
     const c = await m.loadConfigFor('account-1');
     expect(c.baseUrl).toBe('https://legacy/x');
     expect(c.source).toBe('manual');
+    // password из Experiment, не из legacy!
+    expect(c.password).toBe('pw-from-tb');
   });
 
-  it('schema_version=2 без override и без managed, но есть Experiment → auto', async () => {
+  it('schema_version=3 без override и без managed, но есть Experiment → auto', async () => {
     setupBrowser({
       local: {
-        schema_version: 2,
-        accounts: { 'account-1': { password: 'p' } },
+        schema_version: 3,
+        accounts: { 'account-1': {} },
       },
       accounts: [ACC1],
       serverInfo: { hostname: 'mail.example.com', port: 993, type: 'imap',
                     username: 'a', hostnameOrIp: 'mail.example.com' },
+      experiment: 'p',
     });
     const m = await loadModule();
     const c = await m.loadConfigFor('account-1');

@@ -130,12 +130,6 @@
   "options_nav_about":         { "message": "About" },
   "options_field_baseurl":     { "message": "Middleware server URL" },
   "options_field_baseurl_placeholder": { "message": "https://mail.example.com/sieve-proxy" },
-  "options_field_password":    { "message": "Mailbox password" },
-  "options_field_password_placeholder": { "message": "Enter your mailcow password or app-password" },
-  "options_password_hint": {
-    "message": "The password is stored locally in this Thunderbird profile and is sent only to the configured server. It is used to authenticate against the middleware."
-  },
-  "options_partial_config_hint": { "message": "The server URL is set by your administrator. Enter your password to connect." },
   "options_field_mailbox":     { "message": "Mailbox" },
   "options_field_mailbox_placeholder": { "message": "user@example.com" },
   "options_apikey_show":       { "message": "Show" },
@@ -161,9 +155,6 @@
   "options_about_releases":    { "message": "Releases:" },
   "options_about_contact":     { "message": "Contact:" },
   "options_about_license":     { "message": "License:" },
-  "options_about_password_warning": {
-    "message": "The mailbox password is stored in plain text in storage.local. Use an app-password whenever possible."
-  },
 
   "tb_new":              { "message": "Create a new filter" },
   "tb_new_short":        { "message": "New" },
@@ -271,20 +262,20 @@
 
   "ctx_create_filter_from_message": { "message": "Create a filter from this message…" },
 
-  "mgr_lazy_auth_title": { "message": "Enter password" },
-  "mgr_lazy_auth_info":  { "message": "No password is set yet for mailbox {0} to access the filter server.",
+  "mgr_lazy_auth_title": { "message": "Mailbox password needed" },
+  "mgr_lazy_auth_info":  { "message": "The plugin could not get the password for mailbox {0} from the Thunderbird settings.",
     "placeholders": { "0": { "content": "$1" } }
   },
+  "mgr_lazy_auth_step_open":   { "message": "Open Thunderbird Account Settings (menu → Edit → Account Settings)." },
+  "mgr_lazy_auth_step_save":   { "message": "In Server Settings of this mailbox, enter the password and tick “Remember password”." },
+  "mgr_lazy_auth_step_master": { "message": "If you set a Thunderbird primary (master) password, unlock it — the prompt will appear on the next mail check." },
+  "mgr_lazy_auth_still_missing": { "message": "The password is still not available. Make sure it is saved in Account Settings and the primary password is unlocked." },
+  "mgr_lazy_auth_switch":      { "message": "Switch mailbox" },
   "mgr_no_imap_accounts": { "message": "Thunderbird has no configured IMAP/POP3 accounts. Add a mail account in Thunderbird first." },
-  "err_no_password":      { "message": "Enter a password for this mailbox." },
-  "err_password_required":{ "message": "Password is required." },
+  "err_no_password":      { "message": "Save the mailbox password in Thunderbird Account Settings — the plugin will read it from there." },
   "options_no_accounts":  { "message": "No IMAP/POP3 accounts found in Thunderbird." },
   "options_baseurl_global": { "message": "Middleware URL (default)" },
-  "options_password_set":   { "message": "set" },
-  "options_import_password_tb": { "message": "Import from Thunderbird" },
-  "options_import_ok":      { "message": "Password imported from Thunderbird settings." },
-  "options_import_not_found": { "message": "Password not found in Thunderbird settings (please enter it manually)." },
-  "options_import_unavailable": { "message": "Import is unavailable — this Thunderbird version does not support the plugin's Experiment API." },
+  "options_import_unavailable": { "message": "Reading the password from Thunderbird settings is unavailable — this Thunderbird version does not support the plugin's Experiment API." },
   "options_migration_failed": {
     "message": "Legacy configuration for {0} was not migrated automatically (account not found in Thunderbird). Please enter the password manually.",
     "placeholders": { "0": { "content": "$1" } }
@@ -325,7 +316,6 @@
   "options_beh_new_position_end":   { "message": "At the end of the list (default)" },
   "options_beh_new_position_top":   { "message": "At the top of the list" },
   "options_status_ok":          { "message": "Ready" },
-  "options_status_need_password": { "message": "Password needed" },
   "options_status_need_setup":  { "message": "Setup required" },
   "options_url_auto":           { "message": "auto" },
   "options_url_managed":        { "message": "policy" },
@@ -334,14 +324,14 @@
   "options_url_none":           { "message": "not set" },
   "options_url_label":          { "message": "Server:" },
   "options_pwd_label":          { "message": "Password:" },
-  "options_pwd_storage":        { "message": "saved in the plugin" },
-  "options_pwd_experiment":     { "message": "will be pulled from Thunderbird" },
-  "options_pwd_none":           { "message": "not set" },
+  "options_pwd_experiment":     { "message": "loaded from Thunderbird settings" },
+  "options_pwd_none":           { "message": "not available from Thunderbird" },
+  "options_pwd_managed_by_tb":  { "message": "The password is read directly from Thunderbird settings (Account Settings → Server Settings) every time. The plugin never stores it." },
+  "options_pwd_tb_unavailable_long": { "message": "Open Thunderbird Account Settings → Server Settings, enter the password and tick “Remember password”. If you set a Thunderbird primary (master) password, unlock it." },
+  "options_pwd_experiment_unavailable": { "message": "This Thunderbird version does not support reading the password from settings (no Experiment API). Update Thunderbird or use a build with Experiment API support." },
   "options_advanced":           { "message": "Advanced" },
   "options_advanced_hide":      { "message": "Hide advanced" },
-  "options_import_btn":         { "message": "Import from Thunderbird" },
   "options_test_btn":           { "message": "Test connection" },
-  "options_set_manually_btn":   { "message": "Set manually" },
   "options_save_override":      { "message": "Save override" },
   "options_reset_override":     { "message": "Reset override" },
   "options_url_default_hint":   {
@@ -349,10 +339,6 @@
     "placeholders": { "host": { "content": "$1" } }
   },
   "options_url_override_label": { "message": "Middleware URL (override)" },
-  "options_pwd_override_label": { "message": "Password (override)" },
-  "options_pwd_storage_set":    { "message": "Password saved in the plugin." },
-  "options_pwd_experiment_avail": { "message": "Password will be pulled from Thunderbird settings on first use." },
-  "options_pwd_none_long":      { "message": "No password is saved or available from Thunderbird. Enter it manually or import it." },
   "options_url_auto_long":      {
     "message": "Middleware URL was derived automatically from the IMAP host: $URL$",
     "placeholders": { "url": { "content": "$1" } }
@@ -370,9 +356,6 @@
     "placeholders": { "url": { "content": "$1" } }
   },
   "options_url_none_long":      { "message": "Middleware URL is not set. Configure it under “Advanced”." },
-  "options_about_storage_warning": {
-    "message": "The mailbox password is stored in plain text in storage.local. Use an app-password whenever possible."
-  },
   "options_test_inline_ok":     { "message": "Connection successful." },
   "options_test_inline_fail":   {
     "message": "Error: $MSG$",

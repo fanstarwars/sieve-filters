@@ -283,7 +283,9 @@ async function onCreate() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Lazy-auth panel — inline-form для accountId без password.
+// Lazy-auth panel — инструкция открыть TB Account Settings и сохранить
+// пароль; кнопка «Повторить» делает probe и retry'ит создание правила.
+// (v0.15.0+: пароль больше не вводится в плагине.)
 // ────────────────────────────────────────────────────────────────────────────
 function renderLazyAuth({ accountId, mailbox }) {
   state.needsAuth = { accountId, mailbox };
@@ -291,59 +293,68 @@ function renderLazyAuth({ accountId, mailbox }) {
   host.replaceChildren();
 
   const head = document.createElement('h3');
-  head.textContent = t('mgr_lazy_auth_title') || 'Введите пароль';
+  head.textContent = t('mgr_lazy_auth_title') || 'Нужен пароль почты';
   host.append(head);
 
   const info = document.createElement('p');
   info.className = 'lazy-auth-info';
-  info.textContent = (t('mgr_lazy_auth_info') || 'Для ящика {0} ещё не задан пароль.')
+  info.textContent = (t('mgr_lazy_auth_info')
+    || 'Для ящика {0} плагин не смог получить пароль из настроек Thunderbird.')
     .replace('{0}', mailbox);
   host.append(info);
 
-  const form = document.createElement('div');
-  form.className = 'lazy-auth-form';
-  const lblM = document.createElement('label'); lblM.textContent = t('options_field_mailbox');
-  const valM = document.createElement('div'); valM.className = 'lazy-auth-mailbox'; valM.textContent = mailbox;
-  const lblP = document.createElement('label'); lblP.textContent = t('options_field_password');
-  const inp = document.createElement('input');
-  inp.type = 'password'; inp.autocomplete = 'current-password';
-  inp.placeholder = t('options_field_password_placeholder');
+  const steps = document.createElement('ol');
+  steps.className = 'lazy-auth-steps';
+  for (const key of ['mgr_lazy_auth_step_open', 'mgr_lazy_auth_step_save', 'mgr_lazy_auth_step_master']) {
+    const li = document.createElement('li');
+    li.textContent = t(key) || '';
+    steps.append(li);
+  }
+  host.append(steps);
+
   const errorBox = document.createElement('p'); errorBox.className = 'lazy-auth-error'; errorBox.hidden = true;
   const actions = document.createElement('div'); actions.className = 'lazy-auth-actions';
-  const saveBtn = document.createElement('button'); saveBtn.type = 'button'; saveBtn.className = 'primary';
-  saveBtn.textContent = t('options_save_config');
+  const retryBtn = document.createElement('button'); retryBtn.type = 'button'; retryBtn.className = 'primary';
+  retryBtn.textContent = t('mgr_retry') || 'Повторить';
   const cancelBtn = document.createElement('button'); cancelBtn.type = 'button';
   cancelBtn.textContent = t('btn_cancel');
-  actions.append(saveBtn, cancelBtn);
-  form.append(lblM, valM, lblP, inp, errorBox, actions);
-  host.append(form);
+  actions.append(retryBtn, cancelBtn);
+  host.append(errorBox, actions);
 
-  saveBtn.addEventListener('click', async () => {
-    if (!inp.value) {
-      errorBox.hidden = false;
-      errorBox.textContent = t('err_password_required') || 'Пароль обязателен.';
-      return;
+  retryBtn.addEventListener('click', async () => {
+    retryBtn.disabled = true; cancelBtn.disabled = true;
+    errorBox.hidden = true;
+    try {
+      const r = await send('checkPasswordAvailable', { accountId });
+      if (isError(r)) {
+        errorBox.hidden = false;
+        errorBox.textContent = r.error.message || t('err_server');
+        return;
+      }
+      if (!r.available) {
+        errorBox.hidden = false;
+        errorBox.textContent = t('options_import_unavailable')
+          || 'В этой версии Thunderbird не поддерживается чтение пароля из настроек.';
+        return;
+      }
+      if (!r.hasPassword) {
+        errorBox.hidden = false;
+        errorBox.textContent = t('mgr_lazy_auth_still_missing')
+          || 'Пароль всё ещё недоступен. Проверьте, что он сохранён в Account Settings и мастер-пароль разблокирован.';
+        return;
+      }
+      state.needsAuth = null;
+      host.hidden = true;
+      // Retry — кликаем «Создать» ещё раз.
+      onCreate();
+    } finally {
+      retryBtn.disabled = false; cancelBtn.disabled = false;
     }
-    saveBtn.disabled = true; cancelBtn.disabled = true;
-    const r = await send('saveAccountConfig', { accountId, password: inp.value });
-    saveBtn.disabled = false; cancelBtn.disabled = false;
-    if (isError(r)) {
-      errorBox.hidden = false;
-      errorBox.textContent = r.error.message || t('err_server');
-      return;
-    }
-    state.needsAuth = null;
-    host.hidden = true;
-    // Retry — кликаем «Создать» ещё раз.
-    onCreate();
   });
   cancelBtn.addEventListener('click', () => { host.hidden = true; });
-  inp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-  });
 
   host.hidden = false;
-  setTimeout(() => inp.focus(), 50);
+  setTimeout(() => retryBtn.focus(), 50);
 }
 
 // ────────────────────────────────────────────────────────────────────────────

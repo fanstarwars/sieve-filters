@@ -6,6 +6,10 @@
 // тестируем ЛОГИКУ через прямой вызов хелпера: проверяем что обработчик
 // listRules возвращает no_password для аккаунта без пароля, а listAccounts
 // видит этот ящик.
+//
+// v0.15.0+: пароль читается из TB Login Manager (Experiment API), а не из
+// storage. Чтобы сэмулировать «есть пароль» — отдаём строку в getImapPassword;
+// чтобы «нет пароля» — отдаём null.
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -16,10 +20,9 @@ vi.stubGlobal('browser', {
     onChanged: noopListener,
     local: {
       data: {
-        schema_version: 2,
+        schema_version: 3,
         accounts: {
-          'a-1': { password: 'pw' },
-          // a-2: пароля нет
+          // baseUrl override указан для обоих, но реально нужен — будет из global.
         },
         selectedAccountId: 'a-2',
         baseUrl_global: 'https://x/p',
@@ -66,6 +69,10 @@ vi.stubGlobal('browser', {
   mailTabs: { query: async () => [] },
   folders: { query: async () => [] },
   messages: { get: async () => ({}), getFull: async () => ({}) },
+  exporSieveCredentials: {
+    // a-1 → пароль есть в TB Login Manager; a-2 → нет.
+    getImapPassword: async (id) => (id === 'a-1' ? 'pw' : null),
+  },
 });
 
 // Mock proxy_client — для a-1 успех, для a-2 (no password) тут не дойдёт.
